@@ -14,3 +14,53 @@
     </html>
 {{ end }} 
 
+{{ block "body" . }}
+    <div class="">
+        <header>
+            <div class="pt-3 pb-3 sticky z-10 top-0 left-0 w-screen bg-[#ff00bb] text-white text-center">
+                <h2>Péssima Ideia</h2>
+            </div>
+        </header>
+        <div class="m-auto w-[75vw]">
+            {{ template "apps" . }}
+            {{ template "config" . }}
+        </div>
+    </div>
+{{ end }}
+
+{{ block "apps" . }}
+    <div>
+        <p class="text-center m-5">Apps</p>
+        <hr class="" />
+        <div class="m-2 flex flex-row flex-wrap grow gap-5 justify-center">
+            {{ range .Apps }}
+                {{ template "card" . }}
+            {{ end }}
+        </div>
+    </div>
+{{ end }}
+
+{{ block "config" . }}
+    <div>
+        <p class="text-center m-5">Setup</p>
+        <hr class="" />
+        <div class="m-2 flex flex-row flex-wrap grow gap-5 justify-center">
+            {{ range .Config }}
+                {{ template "card" . }}
+            {{ end }}
+        </div>
+    </div>
+{{ end }}
+
+{{ block "card" . }}
+    <div class="w-32 border border-solid border-[#b3078b] border-[3px] rounded-xl p-3 m-1 hover:shadow-lg hover:shadow-[#f5f5f5]">
+        <a href='{{ .Path }}' target="_blank">
+            <div class="is-relative">
+                <figure class="b-image-wrapper is-64x64">
+                    <img src='{{ .Img }}' loading="lazy" class="m-auto" width="64" />
+                </figure>
+            </div>
+            <p class="text-center mt-2">{{ .Name }}</p>
+        </a>
+    </div>
+{{ end }}
