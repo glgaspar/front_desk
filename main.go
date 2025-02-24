@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"front_desk/controller"
 	"front_desk/models"
 	"html/template"
