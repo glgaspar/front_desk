@@ -1,0 +1,23 @@
+{{ block "error" . }}
+    <!DOCTYPE html>
+    <html lang="pt-br">
+        <head>
+            <title>Front Desk</title>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <link rel="stylesheet" href="../dist/tailwind.css" />
+            <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
+        </head>
+        <body class="bg-black text-white">
+            <header>
+                <div class="pt-3 pb-3 sticky z-10 top-0 left-0 w-screen bg-[#ff00bb] text-white text-center">
+                    <h2>Péssima Ideia</h2>
+                </div>
+            </header>
+            <div class="p-10 grid text-center">
+                <p>ERROR</p>
+                <p>{{ . }}</p>
+            </div>
+        </body>
+    </html>
+{{ end }} 
