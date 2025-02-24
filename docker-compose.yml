@@ -1,0 +1,14 @@
+services:
+  server:
+    restart: always  
+    container_name: fornt_desk
+    build:
+      context: .
+    ports:
+      - 8080:69420
+    healthcheck:
+      test: curl --fail http://localhost:8080 || exit 1
+      interval: 10m
+      timeout: 30s
+      retries: 5
+      start_period: 30s
