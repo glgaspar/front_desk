@@ -21,12 +21,12 @@ func newTemplate() *models.Templates {
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Println(fmt.Sprintf("error reading .env %s", err.Error())) 
+		log.Printf("error reading .env %s", err.Error()) 
 	}
 	e := echo.New()
 	e.Use(middleware.Logger())
 
-		e.Static("/dist", "dist")
+	e.Static("/dist", "dist")
 	e.Renderer = newTemplate()
 
 	e.GET("/", controller.Root)
