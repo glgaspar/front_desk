@@ -1,20 +1,20 @@
-{{ block "index" . }}
+{{ block "root" . }}
     <!DOCTYPE html>
     <html lang="pt-br">
         <head>
-            <title>Recepção</title>
+            <title>Front Desk</title>
             <meta charset="UTF-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <link rel="stylesheet" href="../dist/tailwind.css" />
             <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
         </head>
         <body class="bg-black text-white">
-            {{ template "body" . }}
+            {{ template "rootBody" . }}
         </body>
     </html>
 {{ end }} 
 
-{{ block "body" . }}
+{{ block "rootBody" . }}
     <div class="">
         <header>
             <div class="pt-3 pb-3 sticky z-10 top-0 left-0 w-screen bg-[#ff00bb] text-white text-center">
@@ -22,37 +22,37 @@
             </div>
         </header>
         <div class="m-auto w-[75vw]">
-            {{ template "apps" . }}
-            {{ template "config" . }}
+            {{ template "rootApps" . }}
+            {{ template "rootConfig" . }}
         </div>
     </div>
 {{ end }}
 
-{{ block "apps" . }}
+{{ block "rootApps" . }}
     <div>
         <p class="text-center m-5">Apps</p>
         <hr class="" />
         <div class="m-2 flex flex-row flex-wrap grow gap-5 justify-center">
             {{ range .Apps }}
-                {{ template "card" . }}
+                {{ template "rootCard" . }}
             {{ end }}
         </div>
     </div>
 {{ end }}
 
-{{ block "config" . }}
+{{ block "rootConfig" . }}
     <div>
         <p class="text-center m-5">Setup</p>
         <hr class="" />
         <div class="m-2 flex flex-row flex-wrap grow gap-5 justify-center">
             {{ range .Config }}
-                {{ template "card" . }}
+                {{ template "rootCard" . }}
             {{ end }}
         </div>
     </div>
 {{ end }}
 
-{{ block "card" . }}
+{{ block "rootCard" . }}
     <div class="w-32 border border-solid border-[#b3078b] border-[3px] rounded-xl p-3 m-1 hover:shadow-lg hover:shadow-[#f5f5f5]">
         <a href='{{ .Path }}' target="_blank">
             <div class="is-relative">
