@@ -5,7 +5,7 @@ services:
     build:
       context: .
     ports:
-      - 8080:69420
+      - 42069:8080
     healthcheck:
       test: curl --fail http://localhost:8080 || exit 1
       interval: 10m
