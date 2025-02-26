@@ -1,5 +1,6 @@
 {{ block "paychecker" . }}
     <!DOCTYPE html>
+    {{ template "pcJs" . }}
     <html lang="pt-br">
         <head>
             <title>Front Desk</title>
@@ -41,31 +42,71 @@
 
 {{ block "pccard" . }}
     <div class="border border-solid border-[#b3078b] border-[3px] rounded-xl p-3 m-1 hover:shadow-lg hover:shadow-[#f5f5f5]">
-        <div class="grid grid-cols-4 gap-4">
-            <div class="col-span-1 grid">
-                <span class="text-center">Id</span>
-                <span class="text-center"> {{ .Id }}</span>
+        <div id="{{ .Id }}" onclick="changeBottomOpen(this)">
+            <div id="top_{{ .Id }}" class="grid grid-cols-3 gap-4">
+                <div class="col-span-1 grid">
+                    <span class="text-center">Id</span>
+                    <span class="text-center"> {{ .Id }}</span>
+                </div>
+                <div class="col-span-1 grid">
+                    <span class="text-center">Description</span>
+                    <span class="text-center"> {{ .Description }}</span>
+                </div>
+                <div class="col-span-1 grid">
+                    <span class="text-center">ExpDay</span>
+                    <span class="text-center"> {{ .ExpDay }}</span>
+                </div>
+                <div class="col-span-1 grid">
+                    <span class="text-center">Path</span>
+                    <span class="text-center"> {{ .Path }}</span>
+                </div>
+                <div class="col-span-1 grid">
+                    <span class="text-center">LastDate</span>
+                    <span class="text-center"> {{ .LastDate }}</span>
+                </div>
+                <div class="col-span-1 grid">
+                    <span class="text-center">Track</span>
+                    <span class="text-center"> {{ .Track }}</span>
+                </div>
             </div>
-            <div class="col-span-1 grid">
-                <span class="text-center">Description</span>
-                <span class="text-center"> {{ .Description }}</span>
-            </div>
-            <div class="col-span-1 grid">
-                <span class="text-center">ExpDay</span>
-                <span class="text-center"> {{ .ExpDay }}</span>
-            </div>
-            <div class="col-span-1 grid">
-                <span class="text-center">Path</span>
-                <span class="text-center"> {{ .Path }}</span>
-            </div>
-            <div class="col-span-1 grid">
-                <span class="text-center">LastDate</span>
-                <span class="text-center"> {{ .LastDate }}</span>
-            </div>
-            <div class="col-span-1 grid">
-                <span class="text-center">Track</span>
-                <span class="text-center"> {{ .Track }}</span>
+            <div id="bottom_{{ .Id }}" class="hidden">
+                <div class="grid grid-cols-2 gap-4">
+                    <div onclick="payBill(this)">
+                        <p>PAY</p>
+                    </div>
+                    <div onclick="flipTrackingBill( {{ .Id }} )">
+                        <p>Flip Tracking Bill</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+{{ end }}
+
+{{ block "pcJs" . }}
+    <script>
+    function changeBottomOpen(element) {
+        bottom = document.getElementById(`bottom_${element.id}`)
+        console.log(bottom)
+        if (bottom.className == "hidden") {
+            bottom.classList.remove("hidden")
+            return
+        }
+        bottom.classList.add("hidden")
+        return
+    }
+
+    function flipTrackingBill(id) {
+        fetch(`/payChecker/flipTrack/${id}`,
+        { 
+            method: 'PUT',
+        })
+        .then(function(res){ console.log(res) })
+        .catch(function(data){ console.log(data) })
+    }
+
+    function payBill(element) {
+        console.log(element)
+    }
+    </script>
 {{ end }}
