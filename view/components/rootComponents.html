@@ -1,33 +1,3 @@
-{{ block "root" . }}
-    <!DOCTYPE html>
-    <html lang="pt-br">
-        <head>
-            <title>Front Desk</title>
-            <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <link rel="stylesheet" href="../dist/tailwind.css" />
-            <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
-        </head>
-        <body class="bg-black text-white">
-            {{ template "rootBody" . }}
-        </body>
-    </html>
-{{ end }} 
-
-{{ block "rootBody" . }}
-    <div class="">
-        <header>
-            <div class="pt-3 pb-3 sticky z-10 top-0 left-0 w-screen bg-[#ff00bb] text-white text-center">
-                <h2>Péssima Ideia</h2>
-            </div>
-        </header>
-        <div class="m-auto w-[75vw]">
-            {{ template "rootApps" . }}
-            {{ template "rootConfig" . }}
-        </div>
-    </div>
-{{ end }}
-
 {{ block "rootApps" . }}
     <div>
         <p class="text-center m-5">Apps</p>

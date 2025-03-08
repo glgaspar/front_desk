@@ -1,47 +1,19 @@
-{{ block "paychecker" . }}
-    <!DOCTYPE html>
-    {{ template "pcJs" . }}
-    <html lang="pt-br">
-        <head>
-            <title>Front Desk</title>
-            <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <link rel="stylesheet" href="../dist/tailwind.css" />
-            <script src="https://unpkg.com/htmx.org/dist/htmx.min.js"></script>
-        </head>
-        <body class="bg-black text-white">
-            {{ template "pcbody" . }}
-        </body>
-    </html>
-{{ end }} 
-
-{{ block "pcbody" . }}
-    <div class="">
-        <header>
-            <div class="pt-3 pb-3 sticky z-10 top-0 left-0 w-screen bg-[#ff00bb] text-white text-center">
-                <h2>Péssima Ideia</h2>
-            </div>
-        </header>
-        <div class="m-auto w-[75vw]">
-            {{ template "pcdata" . }}
-        </div>
-    </div>
-{{ end }}
-
 {{ block "pcdata" . }}
     <div>
-        {{ template "pcAddNewModal" . }}
+        {{ template "pcAddNewModal" }}
         <p class="text-center m-5">Bills</p>
         <hr class="" />
         <div class="m-2 grid grid-cols-[1fr_75vw_1fr] gap-5">
             <div></div>
             <div class="">
-                {{ range . }}
-                    {{ template "pccard" . }}
-                {{ end }}
+                {{if . }}
+                    {{ range . }}
+                       {{ template "pccard" . }}
+                    {{ end }}
+                {{end}}
             </div>
             <div class="pt-5">
-                <buttom onclick="openModal('pcAddNewModal')">
+                <buttom onclick="openModal('pcAddNewModal');return false">
                     ADD NEW
                 </buttom>
             </div>
@@ -52,7 +24,7 @@
 {{ block "pccard" . }}
     <div class="border border-solid border-[#b3078b] border-[3px] rounded-xl p-3 m-1 hover:shadow-lg hover:shadow-[#f5f5f5]">
         {{ template "pcUploadFile" . }}
-        <div id="{{ .Id }}" onclick="changeBottomOpen(this)">
+        <div id="{{ .Id }}" onclick="changeBottomOpen(this);return false ">
             <div id="top_{{ .Id }}" class="grid grid-cols-3 gap-4">
                 <div class="col-span-1 grid">
                     <span class="text-center">Id</span>
@@ -81,10 +53,10 @@
             </div>
             <div id="bottom_{{ .Id }}" class="hidden">
                 <div class="mr-5 ml-5 grid grid-cols-2 gap-2">
-                    <button class="cursor-pointer" onclick="openModal('pcUploadFile')">
+                    <button class="cursor-pointer" onclick="openModal('pcUploadFile');return false">
                         <p>PAY</p>
                     </button>
-                    <button class="cursor-pointer" onclick="flipTrackingBill({{ .Id }})">
+                    <button class="cursor-pointer" hx-put="paychecker/flipTrack/{{ .Id }}">
                         <p>Flip Tracking Bill</p>
                     </button>
                 </div>
@@ -99,7 +71,7 @@
         <div class="relative rounded-xl bg-[#2B3544] text-white p-5 mx-auto mt-[5rem] min-w-[10rem] md:min-w-[25rem] w-fit min-h-[10rem] max-h-[80vh] h-fit overflow-y-auto">
             <div class="mb-4">
                 <h4 class="text-center font-[600] text-lg mt-2">Upload</h4>
-                <div class="grid absolute right-[0.5rem] top-[0.5rem] text-2xl text-center text-accent-orange p-1 cursor-pointer right-[0.5rem] top-[0.5rem]" onclick="closeModal('pcUploadFile')">&#10060;</div>
+                <div class="grid absolute right-[0.5rem] top-[0.5rem] text-2xl text-center text-accent-orange p-1 cursor-pointer right-[0.5rem] top-[0.5rem]" onclick="closeModal('pcUploadFile');return false">&#10060;</div>
                 <form  class="form">
                     <div id="upload"></div>
                     <div class="mb-3">
@@ -108,7 +80,7 @@
                     </div>
                     <button 
                         class="cursor-pointer"
-                        hx-post="/upload" 
+                        hx-post="/paychecker/pay" 
                         hx-encoding="multipart/form-data" 
                         hx-target="#upload" 
                         type="submit" class="btn btn-primary">Upload</button>
@@ -125,40 +97,40 @@
         <div class="relative rounded-xl bg-[#2B3544] text-white p-5 mx-auto mt-[5rem] min-w-[10rem] md:min-w-[25rem] w-fit min-h-[10rem] max-h-[80vh] h-fit overflow-y-auto">
             <div class="mb-4">
                 <h4 class="text-center font-[600] text-lg mt-2">Create New</h4>
-                <div class="grid absolute right-[0.5rem] top-[0.5rem] text-2xl text-center text-accent-orange p-1 cursor-pointer right-[0.5rem] top-[0.5rem]" onclick="closeModal('pcUploadFile')">&#10060;</div>
-                <form onsubmit="postNew(this)" class="form grid gap-4">
+                <div class="grid absolute right-[0.5rem] top-[0.5rem] text-2xl text-center text-accent-orange p-1 cursor-pointer right-[0.5rem] top-[0.5rem]" onclick="closeModal('pcAddNewModal');return false">&#10060;</div>
+                <div hx-target="#response" hx-post="paychecker/new" hx-ext="submitjson" class="form grid gap-4">
                     <div class="col-span-1 grid">
                         <span class="text-center">Description</span>
-                        <input id="description" class="text-center w-[2/4] bg-black" />
+                        <input id="description" class="text-center w-[2/4] bg-black" required />
                     </div>
                     <div class="col-span-1 grid">
                         <span class="text-center">ExpDay</span>
-                        <input id="expDay" class="text-center w-[2/4] bg-black" />
+                        <input id="expDay" type="number" class="text-center w-[2/4] bg-black" required />
                     </div>
                     <div class="col-span-1 grid">
                         <span class="text-center">Path</span>
-                        <input id="path" class="text-center w-[2/4] bg-black" />
+                        <input id="path" class="text-center w-[2/4] bg-black" required />
                     </div>
                     <div class="col-span-1 grid">
                         <span class="text-center">Track</span>
-                        <input id="track" class="text-center w-[2/4] bg-black" />
+                        <input type="checkbox" id="track" class="text-center w-[2/4] bg-black" required />
                     </div>
                     <div class="grid grid-cols-2">
-                        <button class="border border-solid border-[#b3078b]" onclick="closeModal('pcAddNewModal')">
+                        <button class="border border-solid border-[#b3078b]">
                             CANCEL
                         </button>
-                        <button class="bg-[#b3078b]" type="submit">
+                        <button class="bg-[#b3078b]" type="button">
                             SUBMIT
                         </button>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
 {{ end }}
 
-{{ block "pcJs" . }}
+{{ define "pcJs" }}
     <script>
     function changeBottomOpen(element) {
         bottom = document.getElementById(`bottom_${element.id}`)
@@ -169,15 +141,6 @@
         }
         bottom.classList.add("hidden")
         return
-    }
-
-    function flipTrackingBill(id) {
-        fetch(`/payChecker/flipTrack/${id}`,
-        { 
-            method: 'PUT',
-        })
-        .then(function(res){ console.log(res) })
-        .catch(function(data){ console.log(data) })
     }
 
     function openModal(id) {
