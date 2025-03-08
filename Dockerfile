@@ -7,7 +7,7 @@ WORKDIR /src
 COPY . .
 
 RUN npm install tailwindcss @tailwindcss/cli
-RUN npx tailwindcss -i ./dist/main.css -o ./dist/tailwind.css
+RUN npx tailwindcss -i ./static/main.css -o ./static/tailwind.css
 
 FROM base AS final 
 WORKDIR /app
