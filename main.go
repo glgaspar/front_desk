@@ -1,35 +1,26 @@
 package main
 
 import (
-	"front_desk/controller"
-	"front_desk/models"
-	"html/template"
 	"log"
-
+	"net/http"
+	"front_desk/controller"
+	"front_desk/router"
 	"github.com/joho/godotenv"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
-
-func newTemplate() *models.Templates {
-	return &models.Templates{
-		Templates: template.Must(template.ParseGlob("view/*.html")),
-	}
-}
 
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Printf("error reading .env %s", err.Error()) 
+		log.Printf("error reading .env %s", err.Error())
 	}
-	e := echo.New()
-	e.Use(middleware.Logger())
 
-	e.Static("/dist", "dist")
-	e.Renderer = newTemplate()
+	http.HandleFunc("/", router.Root)
+	http.HandleFunc("/paychecker", router.ShowPayChecker)
+	http.HandleFunc("/paychecker/flipTrack/:billId", controller.FlipPayChecker)
+	http.HandleFunc("/paychecker/new", controller.NewPayChecker)
 
-	e.GET("/", controller.Root)
-	e.GET("/paychecker", controller.PayChecker)
+	fs := http.FileServer(http.Dir("./static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	e.Logger.Fatal(e.Start(":8080"))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
