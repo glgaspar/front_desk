@@ -1,10 +1,11 @@
 package main
 
 import (
+	"github.com/glgaspar/front_desk/router"
 	"log"
 	"net/http"
-	"front_desk/controller"
-	"front_desk/router"
+
+	"github.com/glgaspar/front_desk/controller"
 	"github.com/joho/godotenv"
 )
 

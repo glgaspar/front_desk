@@ -2,11 +2,12 @@ package controller
 
 import (
 	"encoding/json"
-	"front_desk/features/paychecker"
 	"html/template"
 	"io"
 	"net/http"
 	"strconv"
+
+	"github.com/glgaspar/front_desk/features/paychecker"
 )
 
 var tmpl *template.Template
@@ -22,7 +23,7 @@ func init() {
 
 func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
 	var data = new(paychecker.Bill)
-	id, err := strconv.Atoi(r.URL.Query().Get("billId")) 
+	id, err := strconv.Atoi(r.URL.Query().Get("billId"))
 	if err != nil {
 		tmpl.ExecuteTemplate(w, "index.html", err)
 		return
@@ -30,7 +31,7 @@ func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
 	data.Id = id
 	if err = data.FlipTrack(); err != nil {
 		tmpl.ExecuteTemplate(w, "index.html", err)
-		return	
+		return
 	}
 
 	tmpl.ExecuteTemplate(w, "index.html", nil)
@@ -43,9 +44,9 @@ func NewPayChecker(w http.ResponseWriter, r *http.Request) {
 		tmpl.ExecuteTemplate(w, "index.html", err)
 	}
 	defer r.Body.Close()
-	
-	if err := json.Unmarshal(body, &data); err!=nil {
+
+	if err := json.Unmarshal(body, &data); err != nil {
 		tmpl.ExecuteTemplate(w, "index.html", err)
 	}
-	
+
 }

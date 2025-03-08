@@ -1,11 +1,12 @@
 package router
 
 import (
-	"front_desk/features/paychecker"
-	"front_desk/features/root"
+	"github.com/glgaspar/front_desk/features/root"
 	"html/template"
 	"log"
 	"net/http"
+
+	"github.com/glgaspar/front_desk/features/paychecker"
 )
 
 var tmpl *template.Template
@@ -27,12 +28,12 @@ func Root(w http.ResponseWriter, r *http.Request) {
 		tmpl.ExecuteTemplate(w, "index.html", err)
 		return
 	}
-	err := tmpl.ExecuteTemplate(w, "index.html", data) 
+	err := tmpl.ExecuteTemplate(w, "index.html", data)
 	if err != nil {
 		tmpl.ExecuteTemplate(w, "index.html", err)
-			return
+		return
 	}
-		
+
 }
 
 func ShowPayChecker(w http.ResponseWriter, r *http.Request) {

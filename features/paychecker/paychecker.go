@@ -1,8 +1,9 @@
 package paychecker
 
 import (
-	"front_desk/connection"
 	"time"
+
+	"github.com/glgaspar/front_desk/connection"
 )
 
 type Bill struct {
