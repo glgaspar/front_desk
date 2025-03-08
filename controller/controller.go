@@ -30,11 +30,11 @@ func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Id = id
 	if err = data.FlipTrack(); err != nil {
-		tmpl.ExecuteTemplate(w, "index.html", err)
+		tmpl.ExecuteTemplate(w, "error.html", err)
 		return
 	}
 
-	tmpl.ExecuteTemplate(w, "index.html", nil)
+	tmpl.ExecuteTemplate(w, "success.html", nil)
 }
 
 func NewPayChecker(w http.ResponseWriter, r *http.Request) {
@@ -42,11 +42,20 @@ func NewPayChecker(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		tmpl.ExecuteTemplate(w, "index.html", err)
+		return
 	}
 	defer r.Body.Close()
 
 	if err := json.Unmarshal(body, &data); err != nil {
-		tmpl.ExecuteTemplate(w, "index.html", err)
+		tmpl.ExecuteTemplate(w, "error.html", err)
+		return		
 	}
 
+	bill, err := data.CreateBill()
+	if err != nil {
+		tmpl.ExecuteTemplate(w, "error.html", err)
+		return		
+	}
+
+	tmpl.ExecuteTemplate(w, "success.html", bill)
 }

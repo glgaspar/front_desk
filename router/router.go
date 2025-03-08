@@ -25,12 +25,12 @@ func Root(w http.ResponseWriter, r *http.Request) {
 	template.Must(tmpl.ParseGlob("view/pages/root/*.html"))
 	var data = root.RootConfig{}
 	if err := data.Generate(); err != nil {
-		tmpl.ExecuteTemplate(w, "index.html", err)
+		tmpl.ExecuteTemplate(w, "error.html", err)
 		return
 	}
 	err := tmpl.ExecuteTemplate(w, "index.html", data)
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "index.html", err)
+		tmpl.ExecuteTemplate(w, "error.html", err)
 		return
 	}
 
@@ -49,7 +49,7 @@ func ShowPayChecker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := tmpl.ExecuteTemplate(w, "index.html", data); err != nil {
-		tmpl.ExecuteTemplate(w, "index.html", err)
+		tmpl.ExecuteTemplate(w, "error.html", err)
 		return
 	}
 }
