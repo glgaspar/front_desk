@@ -1,24 +1,51 @@
 package controller
 
 import (
-	"front_desk/data"
-	"front_desk/models"
-
-	"github.com/labstack/echo/v4"
+	"encoding/json"
+	"front_desk/features/paychecker"
+	"html/template"
+	"io"
+	"net/http"
+	"strconv"
 )
 
-func Root(c echo.Context) error {
-	var data = models.RootConfig{}
-	if err := data.Generate(); err != nil {
-		return c.Render(500, "error", err)
+var tmpl *template.Template
+
+func init() {
+	if tmpl == nil {
+		if tmpl == nil {
+			tmpl = template.Must(tmpl.ParseGlob("view/layouts/*.html"))
+			template.Must(tmpl.ParseGlob("view/components/*.html"))
+		}
 	}
-	return c.Render(200, "root", data)
 }
 
-func PayChecker(c echo.Context) error {
-	data, err := data.GetPayChecker()
+func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
+	var data = new(paychecker.Bill)
+	id, err := strconv.Atoi(r.URL.Query().Get("billId")) 
 	if err != nil {
-		return c.Render(500, "error", err)
+		tmpl.ExecuteTemplate(w, "index.html", err)
+		return
 	}
-	return c.Render(200, "paychecker", data)
+	data.Id = id
+	if err = data.FlipTrack(); err != nil {
+		tmpl.ExecuteTemplate(w, "index.html", err)
+		return	
+	}
+
+	tmpl.ExecuteTemplate(w, "index.html", nil)
+}
+
+func NewPayChecker(w http.ResponseWriter, r *http.Request) {
+	var data paychecker.Bill
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		tmpl.ExecuteTemplate(w, "index.html", err)
+	}
+	defer r.Body.Close()
+	
+	if err := json.Unmarshal(body, &data); err!=nil {
+		tmpl.ExecuteTemplate(w, "index.html", err)
+	}
+	
 }
