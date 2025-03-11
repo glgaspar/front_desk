@@ -50,12 +50,16 @@ func (b *Bill) CreateBill() (Bill, error) {
 
 	query := `
 	insert into paychecker.bills (description,expDay,path,track)
-	values ($1, $2, $3, $4);`
-	_, err = conn.Query(query, b.Description, b.ExpDay, b.Path, b.Track)
+	values ($1, $2, $3, $4)
+	RETURNING *`
+	newBill, err := conn.Query(query, b.Description, b.ExpDay, b.Path, b.Track)
 	if err != nil {
 		return Bill{}, err
 	}
 
+	for newBill.Next() {
+		newBill.Scan(&b.Id, &b.Description, &b.ExpDay, &b.LastDate, &b.Path, &b.Track)
+	}
 	return *b, nil
 }
 

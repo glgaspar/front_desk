@@ -1,12 +1,10 @@
 package controller
 
 import (
-	"encoding/json"
 	"html/template"
-	"io"
 	"net/http"
 	"strconv"
-
+	"github.com/glgaspar/front_desk/features/components"
 	"github.com/glgaspar/front_desk/features/paychecker"
 )
 
@@ -25,37 +23,40 @@ func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
 	var data = new(paychecker.Bill)
 	id, err := strconv.Atoi(r.URL.Query().Get("billId"))
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "index.html", err)
+		tmpl.ExecuteTemplate(w, "errorPopUp", err)
 		return
 	}
 	data.Id = id
 	if err = data.FlipTrack(); err != nil {
-		tmpl.ExecuteTemplate(w, "error.html", err)
+		tmpl.ExecuteTemplate(w, "errorPopUp", err)
 		return
 	}
 
-	tmpl.ExecuteTemplate(w, "success.html", nil)
+	tmpl.ExecuteTemplate(w, "paycheckerCard", nil)
 }
 
 func NewPayChecker(w http.ResponseWriter, r *http.Request) {
+	var err error
 	var data paychecker.Bill
-	body, err := io.ReadAll(r.Body)
+	form := components.FormData{
+		Data: data,
+	}
+
+	data.Description = r.Form.Get("description")
+	data.Path = r.Form.Get("path")
+	data.ExpDay, err = strconv.Atoi(r.Form.Get("expDay"))
+	*data.Track = true
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "index.html", err)
-		return
-	}
-	defer r.Body.Close()
-
-	if err := json.Unmarshal(body, &data); err != nil {
-		tmpl.ExecuteTemplate(w, "error.html", err)
-		return		
+		form.Error = true
+		form.Message = append(form.Message, err.Error())
 	}
 
-	bill, err := data.CreateBill()
+	newBill, err := data.CreateBill()
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "error.html", err)
-		return		
+		form.Error = true
+		form.Message = append(form.Message, err.Error())	
 	}
-
-	tmpl.ExecuteTemplate(w, "success.html", bill)
+	form.Data = newBill
+	tmpl.ExecuteTemplate(w, "oob-paycheckerCard", form.Data)
+	tmpl.ExecuteTemplate(w, "paycheckerAddNewModal", form)
 }
