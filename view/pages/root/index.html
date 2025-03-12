@@ -1,7 +1,8 @@
-{{ template "index.start" . }}
+{{ block "rootdata" . }}
+{{ template "index.start" }}
 <section class="m-auto w-[75vw]">
     {{ template "rootApps" . }}
     {{ template "rootConfig" . }}
 </section>
-{{ template "index.end" . }}
-
+{{ template "index.end" }}
+{{ end }}
