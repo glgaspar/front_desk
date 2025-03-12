@@ -1,11 +1,11 @@
 package router
 
 import (
-	"github.com/glgaspar/front_desk/features/root"
 	"html/template"
 	"log"
 	"net/http"
 
+	"github.com/glgaspar/front_desk/features/root"
 	"github.com/glgaspar/front_desk/features/paychecker"
 )
 
@@ -16,40 +16,40 @@ func init() {
 		if tmpl == nil {
 			tmpl = template.Must(tmpl.ParseGlob("view/layouts/*.html"))
 			template.Must(tmpl.ParseGlob("view/components/*.html"))
+			template.Must(tmpl.ParseGlob("view/pages/*/*.html"))
 		}
 	}
 }
 
 func Root(w http.ResponseWriter, r *http.Request) {
 	log.Println("Fetching apps")
-	template.Must(tmpl.ParseGlob("view/pages/root/*.html"))
 	var data = root.RootConfig{}
 	if err := data.Generate(); err != nil {
-		tmpl.ExecuteTemplate(w, "error.html", err)
+		tmpl.ExecuteTemplate(w, "error", err)
 		return
 	}
-	err := tmpl.ExecuteTemplate(w, "index.html", data)
+	err := tmpl.ExecuteTemplate(w, "rootdata", data)
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "error.html", err)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		tmpl.ExecuteTemplate(w, "error", err)
 		return
 	}
-
 }
 
 func ShowPayChecker(w http.ResponseWriter, r *http.Request) {
 	log.Println("Fetching paychecker bills")
-	template.Must(tmpl.ParseGlob("view/pages/paychecker/*.html"))
 	data, err := new(paychecker.Bill).GetAllBills()
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "index.html", err)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		tmpl.ExecuteTemplate(w, "error", err)
 		return
 	}
-	if len(data) == 0 {
-		tmpl.ExecuteTemplate(w, "index.html", nil)
-		return
-	}
-	if err := tmpl.ExecuteTemplate(w, "index.html", data); err != nil {
-		tmpl.ExecuteTemplate(w, "error.html", err)
+
+	err = tmpl.ExecuteTemplate(w, "paychecker", data)
+	if err != nil {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		tmpl.ExecuteTemplate(w, "error", err)
 		return
 	}
 }
+

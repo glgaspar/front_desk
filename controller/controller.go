@@ -1,9 +1,13 @@
 package controller
 
 import (
+	"encoding/json"
 	"html/template"
+	"io"
+	"log"
 	"net/http"
 	"strconv"
+
 	"github.com/glgaspar/front_desk/features/components"
 	"github.com/glgaspar/front_desk/features/paychecker"
 )
@@ -21,6 +25,7 @@ func init() {
 }
 
 func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
+	log.Println("flipn track")
 	var data = new(paychecker.Bill)
 	id, err := strconv.Atoi(r.URL.Query().Get("billId"))
 	if err != nil {
@@ -33,7 +38,7 @@ func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.ExecuteTemplate(w, "paycheckerCard", nil)
+	tmpl.ExecuteTemplate(w, "paycheckerCard", data)
 }
 
 func NewPayChecker(w http.ResponseWriter, r *http.Request) {
