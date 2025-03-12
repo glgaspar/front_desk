@@ -76,10 +76,14 @@ func (b *Bill) FlipTrack() error {
 		track = not track
 	where 
 		id = $5 
+	returning *
 		`
-	_, err = conn.Query(query, b.Id)
+	newBill, err := conn.Query(query, b.Id)
 	if err != nil {
 		return err
+	}
+	for newBill.Next() {
+		newBill.Scan(&b.Id, &b.Description, &b.ExpDay, &b.LastDate, &b.Path, &b.Track)
 	}
 
 	return nil
