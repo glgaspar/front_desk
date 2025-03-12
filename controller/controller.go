@@ -14,6 +14,7 @@ func init() {
 	if tmpl == nil {
 		if tmpl == nil {
 			tmpl = template.Must(tmpl.ParseGlob("view/layouts/*.html"))
+			template.Must(tmpl.ParseGlob("view/pages/*/*.html"))
 			template.Must(tmpl.ParseGlob("view/components/*.html"))
 		}
 	}
@@ -36,20 +37,21 @@ func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
 }
 
 func NewPayChecker(w http.ResponseWriter, r *http.Request) {
-	var err error
 	var data paychecker.Bill
-	form := components.FormData{
-		Data: data,
-	}
-
-	data.Description = r.Form.Get("description")
-	data.Path = r.Form.Get("path")
-	data.ExpDay, err = strconv.Atoi(r.Form.Get("expDay"))
-	*data.Track = true
+	var form components.FormData
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		form.Error = true
+		form.Message = append(form.Message, err.Error())	
+		return
+	}
+	defer r.Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
 		form.Error = true
 		form.Message = append(form.Message, err.Error())
 	}
+	form.Data = data
 
 	newBill, err := data.CreateBill()
 	if err != nil {

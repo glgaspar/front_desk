@@ -93,8 +93,10 @@
 
 {{ block "paycheckerAddNewModal" . }}
 <form
-    hx-post="paychecker/new"
+                    hx-post="/paychecker/new"
     hx-swap="outerHTML"
+                    hx-ext="json-enc"
+                    hx-target="#pcAddNewModal"
     >
     <h4 class="text-center font-[600] text-lg mt-2">Create New</h4>
     <div class="grid absolute right-[0.5rem] top-[0.5rem] text-2xl text-center text-accent-orange p-1 cursor-pointer right-[0.5rem] top-[0.5rem]" onclick="closeModal();return false">&#10060;</div>
