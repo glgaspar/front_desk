@@ -1,13 +1,35 @@
 package main
 
 import (
-	"github.com/glgaspar/front_desk/router"
+	"io"
 	"log"
-	"net/http"
+	"text/template"
+
+	"github.com/glgaspar/front_desk/router"
 
 	"github.com/glgaspar/front_desk/controller"
 	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
+
+
+type Template struct {
+	templates *template.Template
+}
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
+
+func NewTemplates() *Template {
+	tmpl := template.Must(template.ParseGlob("view/layouts/*.html"))
+	template.Must(tmpl.ParseGlob("view/components/*.html"))
+	template.Must(tmpl.ParseGlob("view/pages/*/*.html"))
+	return &Template{
+		templates: tmpl,		
+	}
+}
 
 func main() {
 	err := godotenv.Load(".env")
@@ -15,13 +37,16 @@ func main() {
 		log.Printf("error reading .env %s", err.Error())
 	}
 
-	http.HandleFunc("/", router.Root)
-	http.HandleFunc("/paychecker", router.ShowPayChecker)
-	http.HandleFunc("/paychecker/flipTrack/:billId", controller.FlipPayChecker)
-	http.HandleFunc("/paychecker/new", controller.NewPayChecker)
+	e := echo.New()
+    e.Renderer = NewTemplates()
+    e.Use(middleware.Logger())
 
-	fs := http.FileServer(http.Dir("./static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	e.GET("/", router.Root)
+	e.GET("/paychecker", router.ShowPayChecker)
+	e.PUT("/paychecker/flipTrack/:billId", controller.FlipPayChecker)
+	e.POST("/paychecker/new", controller.NewPayChecker)
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	e.Static("/static", "static")
+
+	e.Logger.Fatal(e.Start(":8080"))
 }

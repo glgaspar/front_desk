@@ -2,7 +2,6 @@ package controller
 
 import (
 	"encoding/json"
-	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -10,49 +9,44 @@ import (
 
 	"github.com/glgaspar/front_desk/features/components"
 	"github.com/glgaspar/front_desk/features/paychecker"
+	"github.com/labstack/echo/v4"
 )
 
-var tmpl *template.Template
-
-func init() {
-	if tmpl == nil {
-		if tmpl == nil {
-			tmpl = template.Must(tmpl.ParseGlob("view/layouts/*.html"))
-			template.Must(tmpl.ParseGlob("view/pages/*/*.html"))
-			template.Must(tmpl.ParseGlob("view/components/*.html"))
-		}
-	}
 }
 
-func FlipPayChecker(w http.ResponseWriter, r *http.Request) {
+func FlipPayChecker(c echo.Context) error {
 	log.Println("flipn track")
 	var data = new(paychecker.Bill)
-	id, err := strconv.Atoi(r.URL.Query().Get("billId"))
+	id, err := strconv.Atoi(c.Param("billId"))
 	if err != nil {
-		tmpl.ExecuteTemplate(w, "errorPopUp", err)
-		return
+		c.Render(http.StatusUnprocessableEntity, "errorPopUp", err)
+		return err
 	}
 	data.Id = id
 	if err = data.FlipTrack(); err != nil {
-		tmpl.ExecuteTemplate(w, "errorPopUp", err)
-		return
+		c.Render(http.StatusUnprocessableEntity, "errorPopUp", err)
+		return err
 	}
 
-	tmpl.ExecuteTemplate(w, "paycheckerCard", data)
+	c.Render(http.StatusOK, "paycheckerCard", data)
+	return nil
 }
 
-func NewPayChecker(w http.ResponseWriter, r *http.Request) {
+func NewPayChecker(c echo.Context) error {
 	var data paychecker.Bill
 	var form components.FormData
-	body, err := io.ReadAll(r.Body)
+	var status int = http.StatusOK
+	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
+		status = http.StatusUnprocessableEntity
 		form.Error = true
 		form.Message = append(form.Message, err.Error())	
-		return
+		return err
 	}
-	defer r.Body.Close()
+	defer c.Request().Body.Close()
 
 	if err := json.Unmarshal(body, &data); err != nil {
+		status = http.StatusUnprocessableEntity
 		form.Error = true
 		form.Message = append(form.Message, err.Error())
 	}
@@ -60,10 +54,12 @@ func NewPayChecker(w http.ResponseWriter, r *http.Request) {
 
 	newBill, err := data.CreateBill()
 	if err != nil {
+		status = http.StatusUnprocessableEntity
 		form.Error = true
 		form.Message = append(form.Message, err.Error())	
 	}
 	form.Data = newBill
-	tmpl.ExecuteTemplate(w, "oob-paycheckerCard", form.Data)
-	tmpl.ExecuteTemplate(w, "paycheckerAddNewModal", form)
+	c.Render(status, "oob-paycheckerCard", form.Data)
+	c.Render(status, "paycheckerAddNewModal", form)
+	return nil
 }
