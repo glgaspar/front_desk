@@ -9,9 +9,12 @@ import (
 
 	"github.com/glgaspar/front_desk/features/components"
 	"github.com/glgaspar/front_desk/features/paychecker"
+	"github.com/glgaspar/front_desk/features/login"
 	"github.com/labstack/echo/v4"
 )
 
+func CheckForUsers() error {
+	return new(login.LoginUser).CheckForUsers()
 }
 
 func FlipPayChecker(c echo.Context) error {

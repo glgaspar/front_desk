@@ -37,11 +37,15 @@ func main() {
 		log.Printf("error reading .env %s", err.Error())
 	}
 
+	controller.CheckForUsers() // just setting stuff up
+
 	e := echo.New()
     e.Renderer = NewTemplates()
     e.Use(middleware.Logger())
 
 	e.GET("/", router.Root)
+	// e.GET("/login", router.Login)
+	// e.POST("/login", controller.Login)
 	e.GET("/paychecker", router.ShowPayChecker)
 	e.PUT("/paychecker/flipTrack/:billId", controller.FlipPayChecker)
 	e.POST("/paychecker/new", controller.NewPayChecker)
