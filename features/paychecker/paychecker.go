@@ -75,7 +75,7 @@ func (b *Bill) FlipTrack() error {
 	set 
 		track = not track
 	where 
-		id = $5 
+		id = $1 
 	returning *
 		`
 	newBill, err := conn.Query(query, b.Id)
