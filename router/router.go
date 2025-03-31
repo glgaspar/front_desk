@@ -9,6 +9,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+func Signup(c echo.Context) error {
+	err := c.Render(http.StatusOK, "signup", nil)
+	if err != nil {
+		c.Render(http.StatusTeapot, "error", err)
+		return err
+	}
+	return nil
+}
+
 func Root(c echo.Context) error {
 	log.Println("Fetching apps")
 	var data = root.RootConfig{}

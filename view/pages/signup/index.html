@@ -1,0 +1,35 @@
+{{ block "signup" . }}
+{{ template "index.start" }}
+<section class="m-auto w-[75vw]">
+    {{ template "signupForm" . }}
+</section>
+{{ template "index.end" }}
+{{ end }}
+
+{{ block "signupForm" . }}
+<div id="signupForm" class="m-auto">
+    <form
+        hx-post="/signup"
+        hx-swap="outerHTML"
+        hx-ext="json-enc"
+        hx-target="#signupForm"
+        >
+        <h4 class="text-center font-[600] text-lg mt-2">Create New User</h4>
+        <div hx-target="#response" hx-post="/signup" hx-ext="submitjson" class="form grid gap-4">
+            <div class="col-span-1 grid">
+                <span class="text-center">User Name</span>
+                <input id="userName" name="userName" {{ if .Data.UserName}} value="{{ .Data.UserName }}" {{ else }} placeholder="user name" {{ end }} class="text-center w-[2/4] bg-black" required />
+            </div>
+            <div class="col-span-1 grid">
+                <span class="text-center">Password</span>
+                <input id="password" name="expDay" {{ if .Data.Password}} value="{{ .Data.Password }}" {{ else }} placeholder="ExpDay" {{ end }} type="password" class="text-center w-[2/4] bg-black" required />
+            </div>
+            <div class="grid">
+                <button class="cursor-pointer bg-[#b3078b]" type="submit">
+                    Signup
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{{ end }}
