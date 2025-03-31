@@ -11,6 +11,29 @@ import (
 	"github.com/google/uuid"
 )
 
+func LoginValidator(cookie string) (bool, error) {
+	var valid bool
+	conn, err := connection.Db()
+	if err != nil {
+		return valid, err
+	}
+	defer conn.Close()
+
+	query := `
+	select cast(count(userId) as bool)
+	from adm.activesessions
+	where token = ? `
+	res, err := conn.Query(query, cookie)
+	if err != nil {
+		return valid, err
+	}
+
+	for res.Next() {
+		res.Scan(&valid)
+	}
+
+	return valid, nil
+}
 type LoginUser struct {
 	Id       int    `json:"id" db:"id"`
 	UserName string `json:"userName" db:"userName"`
