@@ -48,6 +48,61 @@ func Signup(c echo.Context) error {
 	return nil
 }
 
+func Login(c echo.Context) error {
+	var data login.LoginUser
+	var form components.FormData
+	var status int = http.StatusOK
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		status = http.StatusUnprocessableEntity
+		form.Error = true
+		form.Message = append(form.Message, err.Error())	
+		return err
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		status = http.StatusUnprocessableEntity
+		form.Error = true
+		form.Message = append(form.Message, err.Error())
+	}
+	form.Data = data
+
+	newSession, err := data.Login()
+	if err != nil {
+		status = http.StatusUnprocessableEntity
+		form.Error = true
+		form.Message = append(form.Message, err.Error())	
+	}
+	form.Data = newSession
+	if form.Error {
+		return c.Render(status, "newUserForm", form)
+	}
+
+	cookie := http.Cookie{
+		Name: newSession.Name,
+		Domain: newSession.Domain,
+		Value: newSession.Value,
+		Expires: newSession.Expires,
+	}
+	
+	c.SetCookie(&cookie)
+	return c.Redirect(http.StatusAccepted, "/")
+}
+
+func LoginValidator(c *http.Cookie) (bool, error) {
+	cookie := c.Value
+	if cookie == "" {
+		return false, nil
+	}
+
+	valid, err := login.LoginValidator(cookie)
+	if err != nil {
+		return false, err
+	}
+	return valid, nil
+}
+
 func FlipPayChecker(c echo.Context) error {
 	log.Println("flipn track")
 	var data = new(paychecker.Bill)
