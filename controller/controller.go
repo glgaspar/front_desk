@@ -17,6 +17,37 @@ func CheckForUsers() error {
 	return new(login.LoginUser).CheckForUsers()
 }
 
+func Signup(c echo.Context) error {
+	var data login.LoginUser
+	var form components.FormData
+	var status int = http.StatusOK
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		status = http.StatusUnprocessableEntity
+		form.Error = true
+		form.Message = append(form.Message, err.Error())	
+		return err
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		status = http.StatusUnprocessableEntity
+		form.Error = true
+		form.Message = append(form.Message, err.Error())
+	}
+	form.Data = data
+
+	newUser, err := data.Create()
+	if err != nil {
+		status = http.StatusUnprocessableEntity
+		form.Error = true
+		form.Message = append(form.Message, err.Error())	
+	}
+	form.Data = newUser
+	c.Render(status, "newUserForm", form)
+	return nil
+}
+
 func FlipPayChecker(c echo.Context) error {
 	log.Println("flipn track")
 	var data = new(paychecker.Bill)
