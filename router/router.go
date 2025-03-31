@@ -18,6 +18,15 @@ func Signup(c echo.Context) error {
 	return nil
 }
 
+func Login(c echo.Context) error {
+	err := c.Render(http.StatusOK, "login", nil)
+	if err != nil {
+		c.Render(http.StatusTeapot, "error", err)
+		return err
+	}
+	return nil
+}
+
 func Root(c echo.Context) error {
 	log.Println("Fetching apps")
 	var data = root.RootConfig{}
