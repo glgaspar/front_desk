@@ -36,8 +36,12 @@ func NewTemplates() *Template {
 func redirect(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var bypass bool = false
+		
+		if c.Path() == "/static*" { bypass = true }
 		if c.Path() == "/signup" { bypass = true }
+		
 		if bypass { return next(c) }
+		
 		if os.Getenv("FIRST_ACCESS") == "YES" {
 			return c.Redirect(301, "/signup")
 		}
@@ -76,10 +80,13 @@ func main() {
 	e.Use(redirect)
 
 	e.GET("/", router.Root)
+
 	e.GET("/login", router.Login)
 	e.POST("/login", controller.Login)
+	
 	e.GET("/signup", router.Signup)
 	e.POST("/signup", controller.Signup)
+	
 	e.GET("/paychecker", router.ShowPayChecker)
 	e.PUT("/paychecker/flipTrack/:billId", controller.FlipPayChecker)
 	e.POST("/paychecker/new", controller.NewPayChecker)
