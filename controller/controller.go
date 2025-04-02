@@ -20,31 +20,30 @@ func CheckForUsers() error {
 func Signup(c echo.Context) error {
 	var data login.LoginUser
 	var form components.FormData
-	var status int = http.StatusOK
+
+	form.Data = data
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
-		status = http.StatusUnprocessableEntity
 		form.Error = true
 		form.Message = append(form.Message, err.Error())	
-		return err
+		return c.Render(http.StatusUnprocessableEntity, "newUserForm", form)
 	}
 	defer c.Request().Body.Close()
 
 	if err := json.Unmarshal(body, &data); err != nil {
-		status = http.StatusUnprocessableEntity
 		form.Error = true
 		form.Message = append(form.Message, err.Error())
+		return c.Render(http.StatusUnprocessableEntity, "newUserForm", form)
 	}
-	form.Data = data
 
 	newUser, err := data.Create()
 	if err != nil {
-		status = http.StatusUnprocessableEntity
 		form.Error = true
-		form.Message = append(form.Message, err.Error())	
+		form.Message = append(form.Message, err.Error())
+		return c.Render(http.StatusUnprocessableEntity, "newUserForm", form)
 	}
 	form.Data = newUser
-	return c.Redirect(status, "/")
+	return c.Redirect(http.StatusMovedPermanently, "/")
 }
 
 func Login(c echo.Context) error {
@@ -86,7 +85,7 @@ func Login(c echo.Context) error {
 	}
 	
 	c.SetCookie(&cookie)
-	return c.Redirect(http.StatusAccepted, "/")
+	return c.Redirect(http.StatusMovedPermanently, "/")
 }
 
 func LoginValidator(c *http.Cookie) (bool, error) {
