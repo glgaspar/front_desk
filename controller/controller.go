@@ -44,8 +44,7 @@ func Signup(c echo.Context) error {
 		form.Message = append(form.Message, err.Error())	
 	}
 	form.Data = newUser
-	c.Render(status, "newUserForm", form)
-	return nil
+	return c.Redirect(status, "/")
 }
 
 func Login(c echo.Context) error {
