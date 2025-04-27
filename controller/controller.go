@@ -26,21 +26,21 @@ func Signup(c echo.Context) error {
 	if err != nil {
 		form.Error = true
 		form.Message = append(form.Message, err.Error())	
-		return c.Render(http.StatusUnprocessableEntity, "newUserForm", form)
+		return c.Render(http.StatusUnprocessableEntity, "signupForm", form)
 	}
 	defer c.Request().Body.Close()
 
 	if err := json.Unmarshal(body, &data); err != nil {
 		form.Error = true
 		form.Message = append(form.Message, err.Error())
-		return c.Render(http.StatusUnprocessableEntity, "newUserForm", form)
+		return c.Render(http.StatusUnprocessableEntity, "signupForm", form)
 	}
 
 	newUser, err := data.Create()
 	if err != nil {
 		form.Error = true
 		form.Message = append(form.Message, err.Error())
-		return c.Render(http.StatusUnprocessableEntity, "newUserForm", form)
+		return c.Render(http.StatusUnprocessableEntity, "signupForm", form)
 	}
 	form.Data = newUser
 	return c.Redirect(http.StatusMovedPermanently, "/")
@@ -74,18 +74,18 @@ func Login(c echo.Context) error {
 	}
 	form.Data = newSession
 	if form.Error {
-		return c.Render(status, "newUserForm", form)
+		return c.Render(status, "loginForm", form)
 	}
 
 	cookie := http.Cookie{
-		Name: newSession.Name,
-		Domain: newSession.Domain,
-		Value: newSession.Value,
+		Name:    newSession.Name,
+		Domain:  newSession.Domain,
+		Value:   newSession.Value,
 		Expires: newSession.Expires,
 	}
 	
 	c.SetCookie(&cookie)
-	return c.Redirect(http.StatusMovedPermanently, "/")
+	return c.Redirect(http.StatusMovedPermanently, "/home")
 }
 
 func LoginValidator(c *http.Cookie) (bool, error) {
