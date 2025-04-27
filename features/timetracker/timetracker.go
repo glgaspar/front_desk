@@ -21,7 +21,7 @@ func (t *Tracker) GetTodayList() error {
 	selectQuery := `
 	select dt_entry
 	from timetracker.timesheet
-	where cast(dt_entry as date) = cast(? as date)
+	where cast(dt_entry as date) = cast($1 as date)
 	order by id`
 	res, err := conn.Query(selectQuery, now)
 	if err != nil {
@@ -52,7 +52,7 @@ func (t *Tracker) NewEntry() error {
 
 	insertQuery := `
 	insert into timetracker.timesheet (dt_entry)
-	values ( ? )
+	values ( $1 )
 	`
 	_, err = conn.Exec(insertQuery,now)
 	if err != nil {
@@ -63,7 +63,7 @@ func (t *Tracker) NewEntry() error {
 	selectQuery := `
 	select dt_entry
 	from timetracker.timesheet
-	where cast(dt_entry as date) = cast(? as date)
+	where cast(dt_entry as date) = cast($1 as date)
 	order by id`
 	res, err := conn.Query(selectQuery, now)
 	if err != nil {
