@@ -79,7 +79,7 @@ func main() {
     e.Use(middleware.Logger())
 	e.Use(redirect)
 
-	e.GET("/", router.Root)
+	e.GET("/home", router.Root)
 
 	e.GET("/login", router.Login)
 	e.POST("/login", controller.Login)
@@ -90,6 +90,9 @@ func main() {
 	e.GET("/paychecker", router.ShowPayChecker)
 	e.PUT("/paychecker/flipTrack/:billId", controller.FlipPayChecker)
 	e.POST("/paychecker/new", controller.NewPayChecker)
+
+	e.GET("/timetracker", router.ShowTimeTracker)
+	e.POST("/timetracker", controller.AddTimeTracker)
 
 	e.Static("/static", "static")
 
