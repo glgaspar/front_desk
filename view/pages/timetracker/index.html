@@ -1,0 +1,9 @@
+{{ block "timetracker" . }}
+    {{ template "index.start" }}
+    <section>
+        <div class="m-auto w-[75vw]">
+            {{ template "timetrackerdata" . }}
+        </div>
+    </section>
+    {{ template "index.end" }}
+{{ end }}
