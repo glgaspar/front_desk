@@ -6,6 +6,7 @@ import (
 
 	"github.com/glgaspar/front_desk/features/paychecker"
 	"github.com/glgaspar/front_desk/features/root"
+	"github.com/glgaspar/front_desk/features/timetracker"
 	"github.com/labstack/echo/v4"
 )
 
@@ -58,3 +59,19 @@ func ShowPayChecker(c echo.Context) error {
 	return nil
 }
 
+func ShowTimeTracker(c echo.Context) error {
+	log.Println("Fetching timetracker timesheet")
+	data := new(timetracker.Tracker)
+	err := data.GetTodayList()
+	if err != nil {
+		c.Render(http.StatusUnprocessableEntity, "error", err)
+		return err
+	}
+
+	err = c.Render(http.StatusOK, "timeTracker", data)
+	if err != nil {
+		c.Render(http.StatusUnprocessableEntity, "error", err)
+		return err
+	}
+	return err
+}
