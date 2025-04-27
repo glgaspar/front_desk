@@ -20,9 +20,13 @@ func LoginValidator(cookie string) (bool, error) {
 	defer conn.Close()
 
 	query := `
-	select cast(count(userId) as bool)
+	select 
+	coalesce(case
+		when count(userId) = 0 then false
+		else true 
+	end,false) 
 	from adm.activesessions
-	where token = ? `
+	where token = $1 `
 	res, err := conn.Query(query, cookie)
 	if err != nil {
 		return valid, err
@@ -69,8 +73,8 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 	select id
 	from adm.users
 	where
-		username = ?
-		and hash = ? `
+		username = $1
+		and password = $2 `
 	res, err := conn.Query(query, u.UserName, hashPass.Sum32())
 	if err != nil {
 		return nil, err
@@ -92,12 +96,12 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 
 	sessionClearQuery := `
 	delete from adm.activesessions
-	where userid = ? 
+	where userid = $1 
 	`
 	sessionCreateQuery := `
 	insert into adm.activesessions
 	(userid, token)
-	values (?,?)
+	values ($1,$2)
 	`
 
 	tran, err := conn.Begin()
@@ -112,6 +116,12 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 	}
 
 	_, err = tran.Exec(sessionCreateQuery, u.Id, sessionToken)
+	if err != nil {
+		tran.Rollback()
+		return nil, err
+	}
+
+	err = tran.Commit()
 	if err != nil {
 		tran.Rollback()
 		return nil, err
@@ -141,8 +151,9 @@ func (u *LoginUser) Create() (LoginUser, error) {
 
 	query := `
 	insert into adm.users (username, password)
-	values (?,?)
+	values ($1,$2)
 	RETURNING id, username`
+	
 	res, err := conn.Query(query, u.UserName, hashPass.Sum32())
 	if err != nil {
 		return *u, err
@@ -191,6 +202,7 @@ func (u *LoginUser) CheckForUsers() error {
 		return nil
 	}
 
+	log.Println("we got users")
 	err = os.Setenv("FIRST_ACCESS", "NO")
 	if err != nil {
 		return err
