@@ -1,6 +1,6 @@
 {{ block "timetrackerdata" . }}
     <div>
-        <p class="text-center m-5">Bills</p>
+        <p class="text-center m-5">Time Tracker</p>
         <hr class="" />
         <div class="m-2 grid grid-cols-[1fr_75vw_1fr] gap-5">
             <div></div>
@@ -8,20 +8,24 @@
                 {{ template "timeTrackerList" . }}
             </div>
             <div class="pt-5">
-                <buttom class="cursor-pointer" hx-post="/timetracker" hx-swap="outerHTML" hx-target="#timeTrackerList" hx-trigger="click">
-                    ADD NEW
-                </buttom>
+                <div class="bg-[#b3078b]">
+                    <buttom class="h-full cursor-pointer" hx-post="/timetracker" hx-swap="outerHTML" hx-target="#timeTrackerList" hx-trigger="click">
+                        <span class="text-warp text-center">ADD NEW</span>
+                    </buttom>
+                </div>
             </div>
         </div>
     </div>
 {{ end }}
 
 {{ block "timeTrackerList" . }}
-    {{if . }}
-    {{ range .List }}
-        {{ template "timeTrackerListEntry" . }}
-    {{ end }}
-    {{end}}
+    <div id="timeTrackerList">
+        {{if . }}
+        {{ range .List }}
+            {{ template "timeTrackerListEntry" . }}
+        {{ end }}
+        {{end}}    
+    </div>
 {{ end }}
 
 
