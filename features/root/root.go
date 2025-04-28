@@ -13,8 +13,9 @@ type RootApp struct {
 }
 
 type RootConfig struct {
-	Apps   []RootApp `json:"Apps"`
-	Config []RootApp `json:"Config"`
+	Apps     []RootApp `json:"Apps"`
+	Features []RootApp
+	Config   []RootApp `json:"Config"`
 }
 
 func (c *RootConfig) Generate() error {
@@ -31,6 +32,19 @@ func (c *RootConfig) Generate() error {
 	if err = json.Unmarshal(bytesBuffer, &c); err != nil {
 		return err
 	}
+
+	c.Features = []RootApp{
+					{
+						Img: "",
+						Name: "PayChecker",
+						Path: "/paychecker",
+					},
+					{
+						Img: "",
+						Name: "TimeTracker",
+						Path: "/timetracker",
+					},
+				}
 
 	return nil
 }

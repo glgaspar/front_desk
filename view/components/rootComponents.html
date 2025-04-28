@@ -10,6 +10,18 @@
     </div>
 {{ end }}
 
+{{ block "rootFeatures" . }}
+<div>
+    <p class="text-center m-5">Features</p>
+    <hr class="" />
+    <div class="m-2 flex flex-row flex-wrap grow gap-5 justify-center">
+        {{ range .Features }}
+            {{ template "rootCard" . }}
+        {{ end }}
+    </div>
+</div>
+{{ end }}
+
 {{ block "rootConfig" . }}
     <div>
         <p class="text-center m-5">Setup</p>
