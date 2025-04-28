@@ -44,7 +44,7 @@ func Signup(c echo.Context) error {
 		return c.Render(http.StatusUnprocessableEntity, "signupForm", form)
 	}
 	form.Data = newUser
-	return c.Redirect(http.StatusMovedPermanently, "/")
+	return c.Render(http.StatusOK, "signupForm", form)
 }
 
 func Login(c echo.Context) error {
@@ -73,7 +73,7 @@ func Login(c echo.Context) error {
 		form.Error = true
 		form.Message = append(form.Message, err.Error())
 	}
-	form.Data = newSession
+
 	if form.Error {
 		return c.Render(status, "loginForm", form)
 	}
@@ -86,7 +86,7 @@ func Login(c echo.Context) error {
 	}
 
 	c.SetCookie(&cookie)
-	return c.Redirect(http.StatusMovedPermanently, "/home")
+	return c.Render(status, "loginForm", form)
 }
 
 func LoginValidator(c *http.Cookie) (bool, error) {
