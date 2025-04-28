@@ -24,6 +24,15 @@
         modal = document.getElementById(id)
         modal.classList.add("hidden")
     }
+    
+    document.addEventListener('htmx:afterRequest', function(evt) {
+        console.log(evt)
+        if(evt.detail.xhr.status == 200){
+            if (evt.srcElement.classList.contains("refresher")) {
+                window.location.reload()
+            }
+        }
+    });
     </script>
     <script>
     htmx.on("htmx:beforeSwap", (e) => {
