@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"text/template"
 
@@ -35,28 +36,27 @@ func NewTemplates() *Template {
 
 func redirect(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		var bypass bool = false
-		
-		if c.Path() == "/static*" { bypass = true }
-		if c.Path() == "/signup" { bypass = true }
-		
-		if bypass { return next(c) }
-		
-		if os.Getenv("FIRST_ACCESS") == "YES" {
-			return c.Redirect(301, "/signup")
+		if c.Path() == "/static*" { return next(c) } //css is free
+				
+		if os.Getenv("FIRST_ACCESS") == "YES" { //forcing you to create the first user
+			return c.Redirect(http.StatusTemporaryRedirect, "/signup")
 		}
 
-		if c.Path() == "/login" { bypass = true }
-		if bypass { return next(c) }
-
+		//making suer you are loged in
 		cookie, err := c.Cookie("front_desk_awesome_cookie") 
 		if (err != nil || cookie == nil) {
+			if c.Path() == "/login" { return next(c) }
+			return c.Redirect(http.StatusTemporaryRedirect, "/login")
+		}
+		valid, err := controller.LoginValidator(cookie)
+		if (err != nil || !valid) {
+			if c.Path() == "/login" { return next(c) }
 			return c.Redirect(301, "/login")
 		}
 
-		valid, err := controller.LoginValidator(cookie)
-		if (err != nil || !valid) {
-			return c.Redirect(301, "/login")
+		//no need to come back here
+		if c.Path() == "/login" || c.Path() == "/signup" {
+			return c.Redirect(http.StatusTemporaryRedirect, "/home") 
 		}
 		
 		return next(c)
