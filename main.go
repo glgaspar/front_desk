@@ -39,6 +39,7 @@ func redirect(next echo.HandlerFunc) echo.HandlerFunc {
 		if c.Path() == "/static*" { return next(c) } //css is free
 				
 		if os.Getenv("FIRST_ACCESS") == "YES" { //forcing you to create the first user
+			if c.Path() == "/signup" { return next(c) }
 			return c.Redirect(http.StatusTemporaryRedirect, "/signup")
 		}
 
