@@ -23,8 +23,7 @@ func (w *Workspace) ListAllTasks() (*[]Task, error) {
 	defer conn.Close()
 
 	var taskList []Task
-	var query string
-	query = `
+	query := `
 	SELECT 
 		t.id, 
 		t.title, 
