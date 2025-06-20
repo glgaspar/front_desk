@@ -7,14 +7,14 @@
 {{ end }}
 
 {{ block "loginForm" . }}
-<div id="loginForm" class="m-auto">
+<div id="loginForm" class="m-auto border-2 border-[#b3078b] rounded-lg p-4 bg-[#1a1a1a]">
     <form
         hx-post="/login"
         hx-swap="outerHTML"
         hx-ext="json-enc"
         hx-target="#loginForm"
         >
-        <h4 class="text-center font-[600] text-lg mt-2">Create New</h4>
+        <h4 class="text-center font-[600] text-lg mt-2">Login</h4>
         <div hx-target="#response" hx-post="/login" hx-ext="submitjson" class="form grid gap-4">
             <div class="col-span-1 grid">
                 <span class="text-center">User Name</span>
