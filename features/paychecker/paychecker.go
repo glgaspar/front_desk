@@ -41,10 +41,10 @@ func (b *Bill) GetAllBills() ([]Bill, error) {
 	return bills, nil
 }
 
-func (b *Bill) CreateBill() (Bill, error) {
+func (b *Bill) CreateBill() (error) {
 	conn, err := connection.Db()
 	if err != nil {
-		return Bill{}, err
+		return err
 	}
 	defer conn.Close()
 
@@ -54,13 +54,13 @@ func (b *Bill) CreateBill() (Bill, error) {
 	RETURNING *`
 	newBill, err := conn.Query(query, b.Description, b.ExpDay, b.Path, b.Track)
 	if err != nil {
-		return Bill{}, err
+		return err
 	}
 
 	for newBill.Next() {
 		newBill.Scan(&b.Id, &b.Description, &b.ExpDay, &b.LastDate, &b.Path, &b.Track)
 	}
-	return *b, nil
+	return nil
 }
 
 func (b *Bill) FlipTrack() error {

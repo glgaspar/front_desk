@@ -19,6 +19,15 @@ type RootConfig struct {
 }
 
 func (c *RootConfig) Generate() error {
+	// will need that later
+	// cmd := exec.Command("docker", "ps")
+    // output, err := cmd.CombinedOutput()
+    // if err != nil {
+    //     fmt.Println("Error:", err)
+    //     return
+    // }
+    // fmt.Println(string(output))
+
 	file, err := os.Open("routes.json")
 	if err != nil {
 		return err
@@ -48,3 +57,5 @@ func (c *RootConfig) Generate() error {
 
 	return nil
 }
+
+

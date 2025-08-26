@@ -1,9 +1,10 @@
 services:
   server:
     restart: always  
-    container_name: fornt_desk
-    build:
-      context: .
+    container_name: front_desk_api
+    build: .
+    stdin_open: true   # Keep STDIN open for interactive use (-i)
+    tty: true          # Allocate a TTY for terminal (-t)
     ports:
       - 42069:8080
     healthcheck:
@@ -12,3 +13,5 @@ services:
       timeout: 30s
       retries: 5
       start_period: 30s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

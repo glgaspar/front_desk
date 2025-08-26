@@ -1,20 +1,19 @@
-FROM golang:1.23.1 AS base
+FROM golang:1.23.1
 
 WORKDIR /app
 
-FROM node:20 AS build
-WORKDIR /src
+# Install Docker CLI
+RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+
+# Copy Go module files and download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the entire project
 COPY . .
 
-RUN npm install tailwindcss @tailwindcss/cli
-RUN npx tailwindcss -i ./static/main.css -o ./static/tailwind.css
+# Build Go binary
+RUN go build -o /front_desk
 
-FROM base AS final 
-WORKDIR /app
-
-COPY go.mod go.sum . ./
-COPY --from=build ./src .
-
-RUN CGO_ENABLED=0 GOOS=linux go build -o /front_desk
-
+# Default command
 CMD ["/front_desk"]
