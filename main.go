@@ -57,9 +57,6 @@ func main() {
     e.Use(middleware.Logger())
 	e.Use(redirect)
 
-	
-	
-
 	e.GET("/validate", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") //returns ok if the validation in middleware passed
 	})
