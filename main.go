@@ -58,15 +58,24 @@ func main() {
 	e.Use(redirect)
 
 	e.GET("/validate", func(c echo.Context) error {
-		return c.String(http.StatusOK, "ok") //returns ok if the validation in middleware passed
+		return c.String(http.StatusOK, "ok") //returns ok if the middleware validation passed
 	})
 	e.POST("/login", controller.Login)
 	
 	e.POST("/signup", controller.Signup)
+
+	e.GET("/apps", controller.GetApps)
+	e.PUT("/apps/:id/:link", controller.SetLink)
+
+	e.GET("/features", controller.GetFeatures)
+
+	// e.GET("/system", controller.GetSystem)
 	
+	e.GET("/paychecker", controller.GetAllBills)
 	e.PUT("/paychecker/flipTrack/:billId", controller.FlipPayChecker)
 	e.POST("/paychecker/new", controller.NewPayChecker)
 
+	e.GET("/timetracker", controller.ShowTimeTracker)
 	e.POST("/timetracker", controller.AddTimeTracker)
 
 
