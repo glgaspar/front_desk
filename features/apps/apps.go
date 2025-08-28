@@ -29,7 +29,9 @@ type App struct {
 
 func (a *App) LoadApps() error {
 	appList := []App{}
-	cmd := exec.Command("docker", "ps --format json")
+	// docker inspect $(docker ps -q) 
+	// is what i probably want, but i dont want to read all that json now
+	cmd := exec.Command("docker", "ps --format '{{json .}}'")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
