@@ -17,12 +17,6 @@ func redirect(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		//healthcheck
 		if c.Path() == "/" { return next(c) }
-
-		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins: []string{os.Getenv("FRONT_END_URL")},
-			AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
-			AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
-		}))
 		
 		//allows you to create the first user	
 		if os.Getenv("FIRST_ACCESS") == "YES" { 
@@ -63,6 +57,11 @@ func main() {
 	} 
 
 	e := echo.New()
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{os.Getenv("FRONT_END_URL")},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+	}))
     e.Use(middleware.Logger())
 	e.Use(redirect)
 
