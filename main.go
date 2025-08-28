@@ -14,7 +14,10 @@ import (
 
 
 func redirect(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {			
+	return func(c echo.Context) error {
+		//healthcheck
+		if c.Path() == "/" { return next(c) }
+
 		//allows you to create the first user	
 		if os.Getenv("FIRST_ACCESS") == "YES" { 
 			if c.Path() == "/register" { return next(c) }
@@ -57,12 +60,15 @@ func main() {
     e.Use(middleware.Logger())
 	e.Use(redirect)
 
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok") 
+	})
+
+	e.POST("/signup", controller.Signup)
+	e.POST("/login", controller.Login)
 	e.GET("/validate", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") //returns ok if the middleware validation passed
 	})
-	e.POST("/login", controller.Login)
-	
-	e.POST("/signup", controller.Signup)
 
 	e.GET("/apps", controller.GetApps)
 	e.PUT("/apps/:id/:link", controller.SetLink)
