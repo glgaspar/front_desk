@@ -1,3 +1,4 @@
+-- Active: 1756348506129@@192.168.10.11@5432@frontdesk
 create database frontdesk;
 
 CREATE SCHEMA adm;
@@ -29,6 +30,25 @@ create table paychecker.bills (
 
 CREATE SCHEMA timetracker;
 create table timetracker.timesheet (
-    id serial primary key
+    id serial primary key,
     dt_entry timestamp not null
+)
+
+create SCHEMA apps
+create table apps.list (
+    id varchar(255) PRIMARY key,
+    command varchar(255), -- thats temporary, dont worry
+    createdat varchar(255), -- thats temporary, dont worry
+    image varchar(255), -- thats temporary, dont worry
+    labels varchar(255), -- thats temporary, dont worry
+    localvolumes varchar(255), -- thats temporary, dont worry
+    mounts varchar(255), -- thats temporary, dont worry
+    names varchar(255), -- thats temporary, dont worry
+    networks varchar(255), -- thats temporary, dont worry
+    ports varchar(255), -- thats temporary, dont worry
+    runningfor varchar(255), -- thats temporary, dont worry
+    size varchar(255), -- thats temporary, dont worry
+    state varchar(255), -- thats temporary, dont worry
+    status varchar(255), -- thats temporary, dont worry
+    link varchar(255) -- thats temporary, dont worry
 )
