@@ -28,7 +28,7 @@ type App struct {
 
 func (a *App) LoadApps() error {
 	appList := []App{}
-	cmd := exec.Command("docker", "ps")
+	cmd := exec.Command("docker", "ps --format json")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
