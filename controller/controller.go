@@ -43,7 +43,7 @@ func Signup(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: "User created successfully"})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "User created successfully"})
 }
 
 func Login(c echo.Context) error {
@@ -75,7 +75,7 @@ func Login(c echo.Context) error {
 	}
 
 	c.SetCookie(&cookie)
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: "Login successful"})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Login successful"})
 }
 
 func LoginValidator(c *http.Cookie) (bool, error) {
@@ -98,7 +98,7 @@ func GetAllBills(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 	
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: fmt.Sprintf("%d bills found", len(data)), Data: data})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d bills found", len(data)), Data: data})
 }
 
 func FlipPayChecker(c echo.Context) error {
@@ -113,7 +113,7 @@ func FlipPayChecker(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: "Operation successful", Data: data})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
 }
 
 func NewPayChecker(c echo.Context) error {
@@ -132,7 +132,7 @@ func NewPayChecker(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: "Operation successful", Data: data})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
 	
 }
 
@@ -144,7 +144,7 @@ func ShowTimeTracker(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 	
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: fmt.Sprintf("%d timestamps found", len(data.List)), Data: data.List})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d timestamps found", len(data.List)), Data: data.List})
 }
 
 func AddTimeTracker(c echo.Context) error {
@@ -154,7 +154,7 @@ func AddTimeTracker(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: "Operation successful", Data: data})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
 }
 
 func GetApps(c echo.Context) error {
@@ -164,7 +164,7 @@ func GetApps(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: fmt.Sprintf("%d Apps found", len(*appList)), Data: appList})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d Apps found", len(*appList)), Data: appList})
 }
 
 func SetLink(c echo.Context) error {
@@ -179,11 +179,11 @@ func SetLink(c echo.Context) error {
 	app.ID = id
 
 	app.SetLink(link)
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: "Operation successful", Data: app})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: app})
 }
 
 func GetFeatures(c echo.Context) error {
 	var feature = new(features.Feature)
 	featureList := feature.Show()
-	return c.JSON(http.StatusAccepted, Response{Status: true, Message: fmt.Sprintf("%d features found", len(featureList)), Data: featureList})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d features found", len(featureList)), Data: featureList})
 }
