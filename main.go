@@ -61,6 +61,7 @@ func main() {
 		AllowOrigins: []string{os.Getenv("FRONT_END_URL")},
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowCredentials: true,
 	}))
     e.Use(middleware.Logger())
 	e.Use(redirect)
