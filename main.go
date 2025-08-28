@@ -69,7 +69,7 @@ func main() {
 		return c.String(http.StatusOK, "ok") 
 	})
 
-	e.POST("/signup", controller.Signup)
+	e.POST("/register", controller.Signup)
 	e.POST("/login", controller.Login)
 	e.GET("/validate", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") //returns ok if the middleware validation passed
