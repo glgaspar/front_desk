@@ -27,7 +27,7 @@ type App struct {
 }
 
 func (a *App) LoadApps() error {
-	appList := []App{}
+	var appList []App
 	// docker inspect $(docker ps -q) 
 	// is what i probably want, but i dont want to read all that json now
 	cmd := exec.Command("sh", "-c", "docker ps --format '{{json .}}' | jq -s .")
