@@ -36,7 +36,7 @@ type App struct {
 
 func (a *App) LoadApps() error {
 	var appList []App
-	cmd := exec.Command("sh", "-c", "docker inspect $(docker ps -q) | jq -s .")
+	cmd := exec.Command("sh", "-c", "docker inspect $(docker ps -q)")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -61,8 +61,8 @@ func (a *App) UpdateList(appList *[]App) error {
 	defer conn.Close()
 
 	query := `
-	INSERT INTO apps.list (id,created,status,exitcode,error,startedat,finishedat,state,image,name,restartcount,project,configfiles,workingdir,replace,labels,config,link)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+	INSERT INTO apps.list (id,created,status,exitcode,error,startedat,finishedat,image,name,restartcount,project,configfiles,workingdir,replace,link)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 	
 	ON CONFLICT (id) DO UPDATE SET
 		created = EXCLUDED.created,
@@ -71,16 +71,13 @@ func (a *App) UpdateList(appList *[]App) error {
 		error = EXCLUDED.error,
 		startedat = EXCLUDED.startedat,
 		finishedat = EXCLUDED.finishedat,
-		state = EXCLUDED.state,
 		image = EXCLUDED.image,
 		name = EXCLUDED.name,
 		restartcount = EXCLUDED.restartcount,
 		project = EXCLUDED.project,
 		configfiles = EXCLUDED.configfiles,
 		workingdir = EXCLUDED.workingdir,
-		replace = EXCLUDED.replace,
-		labels = EXCLUDED.labels,
-		config = EXCLUDED.config;
+		replace = EXCLUDED.replace;
 	`
 
 	for i := range *appList {
@@ -127,7 +124,7 @@ func (a *App) SetLink(link string) error {
 	
 	query = `
 	select 
-		id,created,status,exitcode,error,startedat,finishedat,state,image,name,restartcount,project,configfiles,workingdir,replace,labels,config,link
+		id,created,status,exitcode,error,startedat,finishedat,image,name,restartcount,project,configfiles,workingdir,replace,link
 	from apps.list
 	where id = $1
 	`
