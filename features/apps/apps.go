@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os/exec"
 
-	"regexp"
 	"github.com/glgaspar/front_desk/connection"
 )
 
@@ -38,10 +37,7 @@ func (a *App) LoadApps() error {
 		return err
 	}
 
-	re := regexp.MustCompile(`}\s+{`) // Replace "} {" by "},{"
-	jsonArrayStr := "[" + re.ReplaceAllString(string(output), "},{") + "]"
-
-	err = json.Unmarshal([]byte(jsonArrayStr), &appList)
+	err = json.Unmarshal(output, &appList)
 	if err != nil {
 		return err
 	}
