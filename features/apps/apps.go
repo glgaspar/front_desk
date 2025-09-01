@@ -61,8 +61,8 @@ func (a *App) UpdateList(appList *[]App) error {
 	defer conn.Close()
 
 	query := `
-	INSERT INTO apps.list (id,created,status,exitcode,error,startedat,finishedat,image,name,restartcount,project,configfiles,workingdir,replace,link)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+	INSERT INTO apps.list (id,created,status,exitcode,error,startedat,finishedat,image,name,restartcount,project,configfiles,workingdir,replace)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 	
 	ON CONFLICT (id) DO UPDATE SET
 		created = EXCLUDED.created,
