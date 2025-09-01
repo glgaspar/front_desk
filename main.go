@@ -39,7 +39,7 @@ func authentication(next echo.HandlerFunc) echo.HandlerFunc {
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "Something went wrong: "+ err.Error()})
 		}
-		if !valid == nil {
+		if !valid {
 			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "You're not logged in"})
 		}
 		
