@@ -13,7 +13,7 @@ import (
 )
 
 
-func redirect(next echo.HandlerFunc) echo.HandlerFunc {
+func authentication(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		//healthcheck
 		if c.Path() == "/" { return next(c) }
@@ -23,16 +23,24 @@ func redirect(next echo.HandlerFunc) echo.HandlerFunc {
 			if c.Path() == "/register" { return next(c) }
 		}
 
+		//you dont need to be loged in to log in
+		if c.Path() == "/login" { return next(c) }
+		
 		//making sure you are loged in
 		cookie, err := c.Cookie("front_desk_awesome_cookie") 
-		if (err != nil || cookie == nil) {
-			if c.Path() == "/login" { return next(c) }
+		if err != nil {
+			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "Something went wrong: "+ err.Error()})
+		}
+		if cookie == nil {
+			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "You're not logged in"})
 		}
 
 		valid, err := controller.LoginValidator(cookie)
-		if (err != nil || !valid) {
-			if c.Path() == "/login" { return next(c) }
-			return c.Redirect(301, "/login")
+		if err != nil {
+			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "Something went wrong: "+ err.Error()})
+		}
+		if !valid == nil {
+			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "You're not logged in"})
 		}
 		
 		// update cookie to extend session if expiring in lass than 1 hour
@@ -64,7 +72,7 @@ func main() {
 		AllowCredentials: true,
 	}))
     e.Use(middleware.Logger())
-	e.Use(redirect)
+	e.Use(authentication)
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") 
