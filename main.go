@@ -89,7 +89,7 @@ func main() {
 
 	e.GET("/features", controller.GetFeatures)
 
-	// e.GET("/system", controller.GetSystem)
+	e.GET("/system/usage", controller.GetSystemUsage)
 	
 	e.GET("/paychecker", controller.GetAllBills)
 	e.PUT("/paychecker/flipTrack/:billId", controller.FlipPayChecker)

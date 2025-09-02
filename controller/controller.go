@@ -13,6 +13,7 @@ import (
 	"github.com/glgaspar/front_desk/features/login"
 	"github.com/glgaspar/front_desk/features/paychecker"
 	"github.com/glgaspar/front_desk/features/timetracker"
+	"github.com/glgaspar/front_desk/features/system"
 	"github.com/labstack/echo/v4"
 )
 
@@ -186,4 +187,13 @@ func GetFeatures(c echo.Context) error {
 	var feature = new(features.Feature)
 	featureList := feature.Show()
 	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d features found", len(featureList)), Data: featureList})
+}
+
+func GetSystemUsage(c echo.Context) error {
+	var data = new(system.SystemUsage)
+	err := data.GetSystemUsage()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
 }
