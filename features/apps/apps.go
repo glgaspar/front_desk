@@ -192,24 +192,25 @@ func (a *App) GetList() (*[]App, error) {
 	`
 	rows, err := conn.Query(query)
 	for rows.Next(){
+		var app App
 		rows.Scan(
-			&a.ID,
-			&a.Created,
-			&a.State.Status,
-			&a.State.ExitCode,
-			&a.State.Error,
-			&a.State.StartedAt,
-			&a.State.FinishedAt,
-			&a.Image,
-			&a.Name,
-			&a.RestartCount,
-			&a.Config.Labels.Project,
-			&a.Config.Labels.ConfigFiles,
-			&a.Config.Labels.WorkingDir,
-			&a.Config.Labels.Replace,
-			&a.Link,
+			&app.ID,
+			&app.Created,
+			&app.State.Status,
+			&app.State.ExitCode,
+			&app.State.Error,
+			&app.State.StartedAt,
+			&app.State.FinishedAt,
+			&app.Image,
+			&app.Name,
+			&app.RestartCount,
+			&app.Config.Labels.Project,
+			&app.Config.Labels.ConfigFiles,
+			&app.Config.Labels.WorkingDir,
+			&app.Config.Labels.Replace,
+			&app.Link,
 		)
-		appList = append(appList, *a)
+		appList = append(appList, app)
 	}
 	return &appList, err
 }
