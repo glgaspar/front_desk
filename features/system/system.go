@@ -93,7 +93,7 @@ func GetProcessesUsage() ([]ProcUsage, []ProcUsage, error) {
 		return *CPUUsages[i].CPUPercent > *CPUUsages[j].CPUPercent
 	})
 	sort.Slice(memUsages, func(i, j int) bool {
-		return *memUsages[i].CPUPercent > *memUsages[j].CPUPercent
+		return *memUsages[i].MemPercent > *memUsages[j].MemPercent
 	})
 
 	//if you are more than 15 processes deep, you should go check the server properly

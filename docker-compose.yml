@@ -3,6 +3,7 @@ services:
     restart: always  
     container_name: front_desk_api
     build: .
+    pid: "host"
     stdin_open: true   # Keep STDIN open for interactive use (-i)
     tty: true          # Allocate a TTY for terminal (-t)
     ports:
