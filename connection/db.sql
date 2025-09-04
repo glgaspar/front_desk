@@ -37,18 +37,19 @@ create table timetracker.timesheet (
 create SCHEMA apps
 create table apps.list (
     id varchar(255) PRIMARY key,
-    command varchar(255), -- thats temporary, dont worry
-    createdat varchar(255), -- thats temporary, dont worry
-    image varchar(255), -- thats temporary, dont worry
-    labels varchar(255), -- thats temporary, dont worry
-    localvolumes varchar(255), -- thats temporary, dont worry
-    mounts varchar(255), -- thats temporary, dont worry
-    names varchar(255), -- thats temporary, dont worry
-    networks varchar(255), -- thats temporary, dont worry
-    ports varchar(255), -- thats temporary, dont worry
-    runningfor varchar(255), -- thats temporary, dont worry
-    size varchar(255), -- thats temporary, dont worry
-    state varchar(255), -- thats temporary, dont worry
+    created varchar(255), -- thats temporary, dont worry
     status varchar(255), -- thats temporary, dont worry
+    exitcode varchar(255), -- thats temporary, dont worry
+    error varchar(255), -- thats temporary, dont worry
+    startedat varchar(255), -- thats temporary, dont worry
+    finishedat varchar(255), -- thats temporary, dont worry
+    image varchar(255), -- thats temporary, dont worry
+    name varchar(255), -- thats temporary, dont worry
+    restartcount varchar(255), -- thats temporary, dont worry
+    labels varchar(255), -- thats temporary, dont worry
+    project varchar(255), -- thats temporary, dont worry
+    configfiles varchar(255), -- thats temporary, dont worry
+    workingdir varchar(255), -- thats temporary, dont worry
+    replace varchar(255), -- thats temporary, dont worry
     link varchar(255) -- thats temporary, dont worry
 )

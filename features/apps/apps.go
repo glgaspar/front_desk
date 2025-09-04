@@ -4,33 +4,39 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/glgaspar/front_desk/connection"
 )
 
 type App struct {
-	Command      string  `json:"Command"`
-	CreatedAt    string  `json:"CreatedAt"`
-	ID           string  `json:"ID"`
-	Image        string  `json:"Image"`
-	Labels       string  `json:"Labels"`
-	LocalVolumes string  `json:"LocalVolumes"`
-	Mounts       string  `json:"Mounts"`
-	Names        string  `json:"Names"`
-	Networks     string  `json:"Networks"`
-	Ports        string  `json:"Ports"`
-	RunningFor   string  `json:"RunningFor"`
-	Size         string  `json:"Size"`
-	State        string  `json:"State"`
-	Status       string  `json:"Status"`
-	Link         *string `json:"Link"`
+	ID      string        `db:"id" json:"Id"`
+	Created time.Time     `db:"created" json:"Created"`
+	State   struct {
+		Status     string    `db:"status" json:"Status"`
+		ExitCode   int       `db:"exitcode" json:"ExitCode"`
+		Error      string    `db:"error" json:"Error"`
+		StartedAt  time.Time `db:"startedat" json:"StartedAt"`
+		FinishedAt time.Time `db:"finishedat" json:"FinishedAt"`
+	} `db:"state" json:"State"`
+	Image           string      `db:"image" json:"Image"`
+	Name            string      `db:"name" json:"Name"`
+	RestartCount    int         `db:"restartcount" json:"RestartCount"`
+	Config struct {
+		Labels     struct {
+			Project            	string `db:"project" json:"com.docker.compose.project"`
+			ConfigFiles 		string `db:"configfiles" json:"com.docker.compose.project.config_files"`
+			WorkingDir  		string `db:"workingdir" json:"com.docker.compose.project.working_dir"`
+			Replace            	string `db:"replace" json:"com.docker.compose.replace"`
+		} `db:"labels" json:"Labels"`
+	} `db:"config" json:"Config"`
+	Link *string `db:"link" json:"link"`
 }
+
 
 func (a *App) LoadApps() error {
 	var appList []App
-	// docker inspect $(docker ps -q) 
-	// is what i probably want, but i dont want to read all that json now
-	cmd := exec.Command("sh", "-c", "docker ps --format '{{json .}}' | jq -s .")
+	cmd := exec.Command("sh", "-c", "docker inspect $(docker ps -q)")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -55,40 +61,41 @@ func (a *App) UpdateList(appList *[]App) error {
 	defer conn.Close()
 
 	query := `
-	INSERT INTO apps.list (id, command, createdat, image, labels, localvolumes, mounts, names, networks, ports, runningfor, size, state, status)
+	INSERT INTO apps.list (id,created,status,exitcode,error,startedat,finishedat,image,name,restartcount,project,configfiles,workingdir,replace)
 	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+	
 	ON CONFLICT (id) DO UPDATE SET
-		command = EXCLUDED.command,
-		createdat = EXCLUDED.createdat,
+		created = EXCLUDED.created,
+		status = EXCLUDED.status,
+		exitcode = EXCLUDED.exitcode,
+		error = EXCLUDED.error,
+		startedat = EXCLUDED.startedat,
+		finishedat = EXCLUDED.finishedat,
 		image = EXCLUDED.image,
-		labels = EXCLUDED.labels,
-		localvolumes = EXCLUDED.localvolumes,
-		mounts = EXCLUDED.mounts,
-		names = EXCLUDED.names,
-		networks = EXCLUDED.networks,
-		ports = EXCLUDED.ports,
-		runningfor = EXCLUDED.runningfor,
-		size = EXCLUDED.size,
-		state = EXCLUDED.state,
-		status = EXCLUDED.status;
+		name = EXCLUDED.name,
+		restartcount = EXCLUDED.restartcount,
+		project = EXCLUDED.project,
+		configfiles = EXCLUDED.configfiles,
+		workingdir = EXCLUDED.workingdir,
+		replace = EXCLUDED.replace;
 	`
 
 	for i := range *appList {
 		_, err := conn.Exec(query,
 			(*appList)[i].ID,
-			(*appList)[i].Command,
-			(*appList)[i].CreatedAt,
+			(*appList)[i].Created,
+			(*appList)[i].State.Status,
+			(*appList)[i].State.ExitCode,
+			(*appList)[i].State.Error,
+			(*appList)[i].State.StartedAt,
+			(*appList)[i].State.FinishedAt,
 			(*appList)[i].Image,
-			(*appList)[i].Labels,
-			(*appList)[i].LocalVolumes,
-			(*appList)[i].Mounts,
-			(*appList)[i].Names,
-			(*appList)[i].Networks,
-			(*appList)[i].Ports,
-			(*appList)[i].RunningFor,
-			(*appList)[i].Size,
-			(*appList)[i].State,
-			(*appList)[i].Status,
+			(*appList)[i].Name,
+			(*appList)[i].RestartCount,
+			(*appList)[i].Config.Labels.Project,
+			(*appList)[i].Config.Labels.ConfigFiles,
+			(*appList)[i].Config.Labels.WorkingDir,
+			(*appList)[i].Config.Labels.Replace,
 		)
 		if err != nil {
 			return err
@@ -117,7 +124,7 @@ func (a *App) SetLink(link string) error {
 	
 	query = `
 	select 
-		id, command, createdat, image, labels, localvolumes, mounts, names, networks, ports, runningfor, size, state, status, link
+		id,created,status,exitcode,error,startedat,finishedat,image,name,restartcount,project,configfiles,workingdir,replace,link
 	from apps.list
 	where id = $1
 	`
@@ -129,19 +136,19 @@ func (a *App) SetLink(link string) error {
 	for rows.Next(){
 		rows.Scan(
 			&a.ID,
-			&a.Command,
-			&a.CreatedAt,
+			&a.Created,
+			&a.State.Status,
+			&a.State.ExitCode,
+			&a.State.Error,
+			&a.State.StartedAt,
+			&a.State.FinishedAt,
 			&a.Image,
-			&a.Labels,
-			&a.LocalVolumes,
-			&a.Mounts,
-			&a.Names,
-			&a.Networks,
-			&a.Ports,
-			&a.RunningFor,
-			&a.Size,
-			&a.State,
-			&a.Status,
+			&a.Name,
+			&a.RestartCount,
+			&a.Config.Labels.Project,
+			&a.Config.Labels.ConfigFiles,
+			&a.Config.Labels.WorkingDir,
+			&a.Config.Labels.Replace,
 			&a.Link,
 		)
 	}
@@ -165,26 +172,41 @@ func (a *App) GetList() (*[]App, error) {
 	var appList []App
 	query := `
 	select 
-		id, command, createdat, image, labels, localvolumes, mounts, names, networks, ports, runningfor, size, state, status, link
+		id,
+		created,
+		status,
+		exitcode,
+		error,
+		startedat,
+		finishedat,
+		image,
+		name,
+		restartcount,
+		labels,
+		project,
+		configfiles,
+		workingdir,
+		replace,
+		link
 	from apps.list
 	`
 	rows, err := conn.Query(query)
 	for rows.Next(){
 		rows.Scan(
 			&a.ID,
-			&a.Command,
-			&a.CreatedAt,
+			&a.Created,
+			&a.State.Status,
+			&a.State.ExitCode,
+			&a.State.Error,
+			&a.State.StartedAt,
+			&a.State.FinishedAt,
 			&a.Image,
-			&a.Labels,
-			&a.LocalVolumes,
-			&a.Mounts,
-			&a.Names,
-			&a.Networks,
-			&a.Ports,
-			&a.RunningFor,
-			&a.Size,
-			&a.State,
-			&a.Status,
+			&a.Name,
+			&a.RestartCount,
+			&a.Config.Labels.Project,
+			&a.Config.Labels.ConfigFiles,
+			&a.Config.Labels.WorkingDir,
+			&a.Config.Labels.Replace,
 			&a.Link,
 		)
 		appList = append(appList, *a)
