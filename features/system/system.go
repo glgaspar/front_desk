@@ -10,16 +10,17 @@ import (
 )
 
 type ProcUsage struct {
-	PID        int32
-	Name       string
-	CPUPercent float64
-	MemPercent float32
+	PID        int32    `json:"pid"`
+	Name       string   `json:"name"`
+	CPUPercent *float64 `json:"cpuPercent,omitempty"`
+	MemPercent *float32 `json:"memPercent,omitempty"`
 }
 
 type SystemUsage struct {
-	CPUPercent    float64       `json:"cpuPercent"`
-	MemoryPercent float64       `json:"memoryPercent"`
-	ProcUsage     []ProcUsage   `json:"procUsage"`
+	CPUPercent    float64     `json:"cpuPercent"`
+	MemoryPercent float64     `json:"memoryPercent"`
+	ProcMem       []ProcUsage `json:"procMem"`
+	ProcCPU       []ProcUsage `json:"procCPU"`
 }
 
 func (s *SystemUsage) GetSystemUsage() error {
@@ -35,12 +36,13 @@ func (s *SystemUsage) GetSystemUsage() error {
 	}
 	s.MemoryPercent = *memoryPercent
 
-	processesUsage, err := GetProcessesUsage()
+	CPUUsages, memUsages, err := GetProcessesUsage()
 	if err != nil {
 		return err
 	}
-	s.ProcUsage = processesUsage
 
+	s.ProcMem = memUsages
+	s.ProcCPU = CPUUsages
 
 	return nil
 }
@@ -61,37 +63,46 @@ func GetMemoryUsage() (*float64, error) {
 	return &vmStat.UsedPercent, nil
 }
 
-func GetProcessesUsage() ([]ProcUsage, error) {
+func GetProcessesUsage() ([]ProcUsage, []ProcUsage, error) {
 	procs, err := process.Processes()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-
-	// TODO: split mem and cpu arrays because of ordering
-	var usages []ProcUsage
+	var CPUUsages []ProcUsage
+	var memUsages []ProcUsage
 	for _, p := range procs {
 		cpuPercent, err1 := p.CPUPercent()
 		memPercent, err2 := p.MemoryPercent()
 		name, _ := p.Name()
 		if err1 == nil && err2 == nil {
-			usages = append(usages, ProcUsage{
+			CPUUsages = append(CPUUsages, ProcUsage{
 				PID:        p.Pid,
 				Name:       name,
-				CPUPercent: cpuPercent,
-				MemPercent: memPercent,
+				CPUPercent: &cpuPercent,
+			})
+			memUsages = append(memUsages, ProcUsage{
+				PID:        p.Pid,
+				Name:       name,
+				MemPercent: &memPercent,
 			})
 		}
 	}
 
-	sort.Slice(usages, func(i, j int) bool {
-		return usages[i].CPUPercent > usages[j].CPUPercent
+	sort.Slice(CPUUsages, func(i, j int) bool {
+		return *CPUUsages[i].CPUPercent > *CPUUsages[j].CPUPercent
+	})
+	sort.Slice(memUsages, func(i, j int) bool {
+		return *memUsages[i].CPUPercent > *memUsages[j].CPUPercent
 	})
 
 	//if you are more than 15 processes deep, you should go check the server properly
-	if len(usages) > 15 {
-		usages = usages[:15]
+	if len(memUsages) > 15 {
+		memUsages = memUsages[:15]
+	}
+	if len(CPUUsages) > 15 {
+		CPUUsages = CPUUsages[:15]
 	}
 
-	return usages, nil
+	return CPUUsages, memUsages, nil
 }
