@@ -165,22 +165,7 @@ func GetApps(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d Apps found", len(*appList)), Data: appList})
-}
-
-func SetLink(c echo.Context) error {
-	var app = new(apps.App)
-	id := c.Param("id")
-	link := c.Param("link")
-
-	if id == "" || link == "" {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: "Id and link must be provided"})
-	}
-
-	app.ID = id
-
-	app.SetLink(link)
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: app})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d Apps found", len(appList)), Data: appList})
 }
 
 func GetFeatures(c echo.Context) error {

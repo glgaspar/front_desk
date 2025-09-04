@@ -85,7 +85,6 @@ func main() {
 	})
 
 	e.GET("/apps", controller.GetApps)
-	e.PUT("/apps/:id/:link", controller.SetLink)
 
 	e.GET("/features", controller.GetFeatures)
 
