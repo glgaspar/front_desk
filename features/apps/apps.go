@@ -62,12 +62,18 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 		fmt.Println("Error:", err)
 		return err
 	}
+	var appList []App
 
-	err = json.Unmarshal(output, &a)
+	err = json.Unmarshal(output, &appList)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	if len(appList)==1 {
+		a = &appList[0]
+		return nil
+	}
+	
+	return fmt.Errorf("%d containers returned for that ID", len(appList))
 }
 
