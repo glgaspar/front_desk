@@ -86,16 +86,8 @@ func main() {
 
 	e.GET("/apps", controller.GetApps)
 
-	e.GET("/features", controller.GetFeatures)
-
 	e.GET("/system/usage", controller.GetSystemUsage)
 	
-	e.GET("/paychecker", controller.GetAllBills)
-	e.PUT("/paychecker/flipTrack/:billId", controller.FlipPayChecker)
-	e.POST("/paychecker/new", controller.NewPayChecker)
-
-	e.GET("/timetracker", controller.ShowTimeTracker)
-	e.POST("/timetracker", controller.AddTimeTracker)
 
 
 	e.Logger.Fatal(e.Start(":8080"))

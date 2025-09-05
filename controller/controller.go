@@ -4,15 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/glgaspar/front_desk/features/apps"
-	"github.com/glgaspar/front_desk/features/features"
 	"github.com/glgaspar/front_desk/features/login"
-	"github.com/glgaspar/front_desk/features/paychecker"
-	"github.com/glgaspar/front_desk/features/timetracker"
 	"github.com/glgaspar/front_desk/features/system"
 	"github.com/labstack/echo/v4"
 )
@@ -92,70 +87,12 @@ func LoginValidator(c *http.Cookie) (bool, error) {
 	return valid, nil
 }
 
-func GetAllBills(c echo.Context) error {
-	log.Println("Fetching paychecker bills")
-	data, err := new(paychecker.Bill).GetAllBills()
+func RefreshCookie(c *http.Cookie) (*http.Cookie, error) {
+	valid, err := login.RefreshCookie(c)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+		return c, err
 	}
-	
-	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d bills found", len(data)), Data: data})
-}
-
-func FlipPayChecker(c echo.Context) error {
-	log.Println("flipn track")
-	var data = new(paychecker.Bill)
-	id, err := strconv.Atoi(c.Param("billId"))
-	if err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-	data.Id = id
-	if err = data.FlipTrack(); err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
-	}
-
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
-}
-
-func NewPayChecker(c echo.Context) error {
-	var data paychecker.Bill
-	body, err := io.ReadAll(c.Request().Body)
-	if err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-	defer c.Request().Body.Close()
-
-	if err := json.Unmarshal(body, &data); err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-
-	err = data.CreateBill()
-	if err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
-	
-}
-
-func ShowTimeTracker(c echo.Context) error {
-	log.Println("Fetching timetracker timesheet")
-	data := new(timetracker.Tracker)
-	err := data.GetTodayList()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
-	}
-	
-	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d timestamps found", len(data.List)), Data: data.List})
-}
-
-func AddTimeTracker(c echo.Context) error {
-	log.Println("adding new time")
-	var data = new(timetracker.Tracker)
-	err := data.NewEntry()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
-	}
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
+	return valid, nil
 }
 
 func GetApps(c echo.Context) error {
@@ -166,12 +103,6 @@ func GetApps(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d Apps found", len(appList)), Data: appList})
-}
-
-func GetFeatures(c echo.Context) error {
-	var feature = new(features.Feature)
-	featureList := feature.Show()
-	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d features found", len(featureList)), Data: featureList})
 }
 
 func GetSystemUsage(c echo.Context) error {
