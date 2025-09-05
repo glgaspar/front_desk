@@ -118,7 +118,7 @@ func AppsToggleOnOFF(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Apps found"})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: app})
 }
 
 func GetSystemUsage(c echo.Context) error {

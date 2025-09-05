@@ -55,6 +55,19 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 		fmt.Println("Error:", err)
 		return err
 	}
+
+	cmd = exec.Command("sh", "-c", fmt.Sprintf("docker inspect %s",id))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+
+	err = json.Unmarshal(output, &a)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
