@@ -105,6 +105,22 @@ func GetApps(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d Apps found", len(appList)), Data: appList})
 }
 
+func AppsToggleOnOFF(c echo.Context) error {
+	id := c.Param("id")
+	toggle := c.Param("toggle")
+	if (toggle != "start" && toggle != "stop") || id == "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Both Id (str) and toggle (\"start\", \"stop\") must be sent"})
+	}
+	
+	var app = new(apps.App)
+	err := app.ToggleOnOFF(id, toggle)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Apps found"})
+}
+
 func GetSystemUsage(c echo.Context) error {
 	var data = new(system.SystemUsage)
 	err := data.GetSystemUsage()

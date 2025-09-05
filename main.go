@@ -88,6 +88,7 @@ func main() {
 	})
 
 	e.GET("/apps", controller.GetApps)
+	e.PUT("/apps/toggleOnOff/:id/:toggle", controller.AppsToggleOnOFF)
 
 	e.GET("/system/usage", controller.GetSystemUsage)
 	

@@ -48,3 +48,18 @@ func (a *App) GetList() ([]App, error) {
 	return appList, nil 
 }
 
+func (a *App) ToggleOnOFF(id string, toggle string) error {
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("docker %s %s", toggle, id))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+
+	if string(output) == id {
+		return nil
+	}
+
+	return fmt.Errorf("this does not match what im used to see in console \nid sent: %s\noutput: %s", id, string(output))
+}
+
