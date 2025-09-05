@@ -12,6 +12,7 @@ CREATE TABLE adm.users (
 CREATE TABLE adm.activesessions (
 	userid int4 NOT NULL,
 	"token" varchar(255) NOT NULL,
+    expire timestamp not null,
 	CONSTRAINT activesessions_pkey PRIMARY KEY (userid)
 );
 ALTER TABLE adm.activesessions ADD CONSTRAINT activesessions_userid_fkey FOREIGN KEY (userid) REFERENCES adm.users(id);

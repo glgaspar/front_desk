@@ -45,8 +45,11 @@ func authentication(next echo.HandlerFunc) echo.HandlerFunc {
 		
 		// update cookie to extend session if expiring in lass than 1 hour
 		if cookie.Expires.Sub(cookie.Expires.Add(-1 * time.Hour)).Hours() < 1 {
-			cookie.Expires = cookie.Expires.Add(24 * time.Hour)
-			c.SetCookie(cookie)
+			newCookie, err := controller.RefreshCookie(cookie)
+			if err != nil {
+				return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "Something went wrong: "+ err.Error()})
+			}
+			c.SetCookie(newCookie)
 		}
 
 		return next(c)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"hash/fnv"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -26,7 +27,7 @@ func LoginValidator(cookie string) (bool, error) {
 		else true 
 	end,false) 
 	from adm.activesessions
-	where token = $1 `
+	where token = $1 and expire >= now() `
 	res, err := conn.Query(query, cookie)
 	if err != nil {
 		return valid, err
@@ -38,6 +39,35 @@ func LoginValidator(cookie string) (bool, error) {
 
 	return valid, nil
 }
+
+func RefreshCookie(cookie *http.Cookie) (*http.Cookie, error) {
+	cookie.Expires = cookie.Expires.Add(24 * time.Hour)
+	conn, err := connection.Db()
+	if err != nil {
+		return cookie, err
+	}
+	defer conn.Close()
+
+	query := `
+	update adm.activesessions
+		token $1,
+		expire = $2
+	where
+		token = $1
+	RETURNING token, expire`
+	
+	res, err := conn.Query(query, (*cookie).Value, (*cookie).Expires)
+	if err != nil {
+		return cookie, err
+	}
+
+	for res.Next() {
+		res.Scan(&(*cookie).Value, &(*cookie).Expires)
+	}
+
+	return cookie, nil
+}
+
 type LoginUser struct {
 	Id       int    `json:"id" db:"id"`
 	UserName string `json:"userName" db:"userName"`
@@ -53,8 +83,13 @@ type SessionCookie struct {
 }
 
 func (u *LoginUser) Login() (*SessionCookie, error) {
-	session := new(SessionCookie)
-	sessionToken := uuid.New()
+	session := SessionCookie{
+		Name: "front_desk_awesome_cookie",
+		Value: uuid.New().String(),
+		Domain: os.Getenv("DOMAIN_NAME"),
+		Expires: time.Now().Add(time.Hour * 24),
+	}
+
 	userCount := 0
 	hashPass := fnv.New32a()
 
@@ -87,7 +122,7 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 
 	if userCount == 0 {
 		session.Valid = false
-		return session, nil
+		return &session, nil
 	}
 
 	if userCount > 1 {
@@ -96,12 +131,12 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 
 	sessionClearQuery := `
 	delete from adm.activesessions
-	where userid = $1 
+	where userid = $1 and expire < now()
 	`
 	sessionCreateQuery := `
 	insert into adm.activesessions
-	(userid, token)
-	values ($1,$2)
+	(userid, token, expire)
+	values ($1,$2,$3)
 	`
 
 	tran, err := conn.Begin()
@@ -115,7 +150,7 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 		return nil, err
 	}
 
-	_, err = tran.Exec(sessionCreateQuery, u.Id, sessionToken)
+	_, err = tran.Exec(sessionCreateQuery, u.Id, session.Value, session.Expires)
 	if err != nil {
 		tran.Rollback()
 		return nil, err
@@ -128,12 +163,8 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 	}
 
 	session.Valid = true
-	session.Name = "front_desk_awesome_cookie"
-	session.Value = sessionToken.String()
-	session.Domain = os.Getenv("DOMAIN_NAME")
-	session.Expires = time.Now().Add(time.Hour * 24)
 
-	return session, nil
+	return &session, nil
 }
 
 func (u *LoginUser) Create() (LoginUser, error) {
