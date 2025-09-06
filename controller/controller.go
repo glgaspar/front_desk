@@ -87,6 +87,22 @@ func LoginValidator(c *http.Cookie) (bool, error) {
 	return valid, nil
 }
 
+func Logout(c echo.Context) error {
+	var user login.LoginUser
+	cookie, err := c.Cookie("front_desk_awesome_cookie")
+
+	err = user.Logout(cookie)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	cookie.Value = ""
+	cookie.MaxAge = -1
+	cookie.Path = "/"
+	c.SetCookie(cookie)
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Logout successful"})
+}
 func RefreshCookie(c *http.Cookie) (*http.Cookie, error) {
 	valid, err := login.RefreshCookie(c)
 	if err != nil {

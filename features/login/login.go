@@ -240,3 +240,22 @@ func (u *LoginUser) CheckForUsers() error {
 	}
 	return nil
 }
+
+func (u *LoginUser) Logout(cookie *http.Cookie) error {
+	conn, err := connection.Db()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	sessionClearQuery := `
+	delete from adm.activesessions
+	where token = $1
+	`
+	_, err = conn.Exec(sessionClearQuery, cookie.Value)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

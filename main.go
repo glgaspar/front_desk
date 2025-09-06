@@ -63,9 +63,9 @@ func main() {
 		log.Printf("error reading .env %s", err.Error())
 	}
 
-	// if err := controller.CheckForUsers(); err != nil { // just setting stuff up
-	// 	panic(err)
-	// } 
+	if err := controller.CheckForUsers(); err != nil { // just setting stuff up
+		panic(err)
+	} 
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -75,7 +75,7 @@ func main() {
 		AllowCredentials: true,
 	}))
     e.Use(middleware.Logger())
-	// e.Use(authentication)
+	e.Use(authentication)
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") 
@@ -83,6 +83,8 @@ func main() {
 
 	e.POST("/register", controller.Signup)
 	e.POST("/login", controller.Login)
+	e.GET("/login/logout", controller.Logout)
+	
 	e.GET("/validate", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") //returns ok if the middleware validation passed
 	})
