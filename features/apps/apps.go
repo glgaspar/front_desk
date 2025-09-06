@@ -3,36 +3,131 @@ package apps
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"time"
 )
 
-type App struct {
-	ID      string        `db:"id" json:"Id"`
-	Created time.Time     `db:"created" json:"Created"`
+type Container struct {
+	ID      string        `json:"Id"`
+	Created time.Time     `json:"Created"`
 	State   struct {
-		Status     string    `db:"status" json:"Status"`
-		ExitCode   int       `db:"exitcode" json:"ExitCode"`
-		Error      string    `db:"error" json:"Error"`
-		StartedAt  time.Time `db:"startedat" json:"StartedAt"`
-		FinishedAt time.Time `db:"finishedat" json:"FinishedAt"`
-	} `db:"state" json:"State"`
-	Image           string      `db:"image" json:"Image"`
-	Name            string      `db:"name" json:"Name"`
-	RestartCount    int         `db:"restartcount" json:"RestartCount"`
+		Status     string    `json:"Status"`
+		ExitCode   int       `json:"ExitCode"`
+		Error      string    `json:"Error"`
+		StartedAt  time.Time `json:"StartedAt"`
+		FinishedAt time.Time `json:"FinishedAt"`
+	} `json:"State"`
+	Image           string      `json:"Image"`
+	Name            string      `json:"Name"`
+	RestartCount    int         `json:"RestartCount"`
 	Config struct {
 		Labels     struct {
-			Project            	string `db:"project" json:"com.docker.compose.project"`
-			ConfigFiles 		string `db:"configfiles" json:"com.docker.compose.project.config_files"`
-			WorkingDir  		string `db:"workingdir" json:"com.docker.compose.project.working_dir"`
-			Replace            	string `db:"replace" json:"com.docker.compose.replace"`
-		} `db:"labels" json:"Labels"`
-	} `db:"config" json:"Config"`
+			Name string `json:"front-desk.name"` 
+			Url string `json:"front-desk.url"` 
+			Dir string `json:"front-desk.dir"` 
+			Logo *string `json:"front-desk.logo"`
+		} `json:"Labels"`
+	} `json:"Config"`
+}
+
+func (c *Container) Translate() App {
+	return App{
+		Id:      c.ID,
+		Created: c.Created,
+		Image:   c.Image,
+		Name:    c.Config.Labels.Name,
+		Url:     c.Config.Labels.Url,
+		Dir:     c.Config.Labels.Dir,
+		Logo:    c.Config.Labels.Logo,
+		State: struct {
+			Status     string `json:"status"`
+			ExitCode   int    `json:"exitCode"`
+			Error      string `json:"error"`
+			StartedAt  time.Time `json:"startedAt"`
+			FinishedAt time.Time `json:"finishedAt"`
+		}{
+			Status:     c.State.Status,
+			ExitCode:   c.State.ExitCode,
+			Error:      c.State.Error,
+			StartedAt:  c.State.StartedAt,
+			FinishedAt: c.State.FinishedAt,
+		},
+	}
+}
+
+func (a *Container) GetApp() (*App, error) {
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("docker inspect %s", a.ID))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return nil, err
+	}
+	var containerList []Container
+
+	err = json.Unmarshal(output, &containerList)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(containerList)==1 {
+		app := containerList[0].Translate()
+		return &app, nil
+	}
+	
+	return nil, fmt.Errorf("%d containers returned for that ID", len(containerList))
+}
+
+func (c *Container) GetCompose() (string, error) {
+	var compose string = ""
+	app, err := c.GetApp()
+	if err != nil {
+		return compose, err
+	}
+	
+	file, err := os.ReadFile("/apps"+app.Dir+"/docker-compose.yml")
+	if err != nil {
+		return compose, err
+	}
+	compose = string(file)
+	return compose, nil
 }
 
 
+func (c *Container) SaveCompose(compose struct{ Compose string `json:"compose"` }) error {
+	app, err := c.GetApp()
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile("/apps"+app.Dir+"/docker-compose.yml", []byte(compose.Compose), 0644)
+    if err != nil {
+        fmt.Println("Error writing file:", err)
+    }
+	
+	return err
+}
+
+type App struct {
+	Id string `json:"id"` 
+	Created time.Time `json:"created"` 
+	Image string `json:"image"` 
+	Name string `json:"name"` 
+	Url string `json:"url"` 
+	Dir string `json:"dir"`
+	Logo *string `json:"logo"`
+	State struct {
+		Status string `json:"status"`
+		ExitCode int `json:"exitCode"`
+		Error string `json:"error"`
+		StartedAt time.Time `json:"startedAt"`
+		FinishedAt time.Time `json:"finishedAt"`
+	} `json:"state"`
+}
+
 func (a *App) GetList() ([]App, error) {
 	var appList []App
+	var containerList []Container
 	cmd := exec.Command("sh", "-c", "docker inspect $(docker ps -a -q)")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -40,11 +135,15 @@ func (a *App) GetList() ([]App, error) {
 		return appList, err
 	}
 
-	err = json.Unmarshal(output, &appList)
+	err = json.Unmarshal(output, &containerList)
 	if err != nil {
 		return appList, err
 	}
 	
+	for _, container := range containerList {
+		appList = append(appList, container.Translate())
+	}
+
 	return appList, nil 
 }
 
@@ -55,25 +154,14 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 		fmt.Println("Error:", err)
 		return err
 	}
-
-	cmd = exec.Command("sh", "-c", fmt.Sprintf("docker inspect %s",id))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return err
-	}
-	var appList []App
-
-	err = json.Unmarshal(output, &appList)
-	if err != nil {
-		return err
-	}
-
-	if len(appList)==1 {
-		*a = appList[0]
-		return nil
-	}
 	
-	return fmt.Errorf("%d containers returned for that ID", len(appList))
+	container := Container{ID: id}
+	app, err := container.GetApp()
+	if err != nil {
+		return err
+	}
+	*a = *app
+	return nil
+
 }
 

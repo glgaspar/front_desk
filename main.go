@@ -91,6 +91,8 @@ func main() {
 
 	e.GET("/apps", controller.GetApps)
 	e.PUT("/apps/toggleOnOff/:id/:toggle", controller.AppsToggleOnOFF)
+	e.GET("/apps/compose/:id", controller.GetCompose)
+	e.POST("/apps/compose/:id", controller.SaveCompose)
 
 	e.GET("/system/usage", controller.GetSystemUsage)
 	

@@ -145,3 +145,43 @@ func GetSystemUsage(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
 }
+
+func GetCompose(c echo.Context) error {
+	id := c.Param("id")
+	if  id == "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
+	}
+	
+	container := apps.Container{ID: id}
+	data, err := container.GetCompose()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
+}
+
+func SaveCompose(c echo.Context) error {
+	id := c.Param("id")
+	if  id == "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
+	}
+	var data struct{ Compose string `json:"compose"` }
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	
+	container := apps.Container{ID: id}
+	err = container.SaveCompose(data)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}

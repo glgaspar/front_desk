@@ -16,3 +16,4 @@ services:
       start_period: 30s
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /apps:/mnt/apps #map to where you want to store apps
