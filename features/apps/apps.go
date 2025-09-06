@@ -70,7 +70,7 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 	}
 
 	if len(appList)==1 {
-		a = &appList[0]
+		*a = appList[0]
 		return nil
 	}
 	
