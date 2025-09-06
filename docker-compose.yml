@@ -1,6 +1,6 @@
 services:
   server:
-    restart: always  
+    restart: always
     container_name: front_desk_api
     build: .
     pid: "host"
@@ -14,6 +14,11 @@ services:
       timeout: 30s
       retries: 5
       start_period: 30s
+    labels:
+      front-desk.name: FrontDesk API
+      front-desk.url: pessimaideia.com
+      front-desk.dir: /front_desk
+      front-desk.logo: https://example.com/logo.png
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /apps:/mnt/apps #map to where you want to store apps
+      - /mnt/apps:/apps
