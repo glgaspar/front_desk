@@ -93,7 +93,6 @@ func (c *Container) GetCompose() (string, error) {
 	return compose, nil
 }
 
-
 func (c *Container) SaveCompose(compose struct{ Compose string `json:"compose"` }) error {
 	app, err := c.GetApp()
 	if err != nil {
@@ -104,8 +103,8 @@ func (c *Container) SaveCompose(compose struct{ Compose string `json:"compose"` 
     if err != nil {
         fmt.Println("Error writing file:", err)
     }
-	
-	return err
+
+	return Rebuild(app.Dir)
 }
 
 type App struct {
@@ -165,3 +164,13 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 
 }
 
+func Rebuild(path string) error {
+	os.Chdir("/mnt/apps"+path)
+	cmd := exec.Command("sh", "-c", "docker compose up -d --build")
+	_, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+	return nil
+}
