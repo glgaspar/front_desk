@@ -165,7 +165,11 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 }
 
 func Rebuild(path string) error {
-	os.Chdir("/mnt/apps"+path)
+	var correctPath string
+	if path[0] != '/' {
+		correctPath = "/" + path
+	}
+	os.Chdir("/apps"+correctPath)
 	cmd := exec.Command("sh", "-c", "docker compose up -d --build")
 	_, err := cmd.CombinedOutput()
 	if err != nil {
