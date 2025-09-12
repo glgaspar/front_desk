@@ -21,4 +21,4 @@ services:
       front-desk.logo: https://example.com/logo.png
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /mnt/apps:/apps
+      - /mnt/apps:/src/apps

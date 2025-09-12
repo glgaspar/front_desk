@@ -85,7 +85,7 @@ func (c *Container) GetCompose() (string, error) {
 		return compose, err
 	}
 	
-	file, err := os.ReadFile("/apps"+app.Dir+"/docker-compose.yml")
+	file, err := os.ReadFile("/src/apps"+app.Dir+"/docker-compose.yml")
 	if err != nil {
 		return compose, err
 	}
@@ -99,7 +99,7 @@ func (c *Container) SaveCompose(compose struct{ Compose string `json:"compose"` 
 		return err
 	}
 
-	err = os.WriteFile("/apps"+app.Dir+"/docker-compose.yml", []byte(compose.Compose), 0644)
+	err = os.WriteFile("/src/apps"+app.Dir+"/docker-compose.yml", []byte(compose.Compose), 0644)
     if err != nil {
         fmt.Println("Error writing file:", err)
     }
@@ -169,9 +169,12 @@ func Rebuild(path string) error {
 	if path[0] != '/' {
 		correctPath = "/" + path
 	}
-	os.Chdir("/apps"+correctPath)
+	err := os.Chdir("/src/apps"+correctPath)
+	if err != nil {
+		return err
+	}
 	cmd := exec.Command("sh", "-c", "docker compose up -d --build")
-	_, err := cmd.CombinedOutput()
+	_, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
 		return err

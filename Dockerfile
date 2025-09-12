@@ -1,6 +1,6 @@
 FROM golang:1.23.1
 
-WORKDIR /app
+WORKDIR /src
 
 # Install Docker CLI
 RUN apt-get update && apt-get install -y docker.io jq && rm -rf /var/lib/apt/lists/*
