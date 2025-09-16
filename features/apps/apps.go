@@ -9,8 +9,8 @@ import (
 )
 
 type Container struct {
-	ID      string        `json:"Id"`
-	Created time.Time     `json:"Created"`
+	ID      string    `json:"Id"`
+	Created time.Time `json:"Created"`
 	State   struct {
 		Status     string    `json:"Status"`
 		ExitCode   int       `json:"ExitCode"`
@@ -18,14 +18,14 @@ type Container struct {
 		StartedAt  time.Time `json:"StartedAt"`
 		FinishedAt time.Time `json:"FinishedAt"`
 	} `json:"State"`
-	Image           string      `json:"Image"`
-	Name            string      `json:"Name"`
-	RestartCount    int         `json:"RestartCount"`
-	Config struct {
-		Labels     struct {
-			Name string `json:"front-desk.name"` 
-			Url string `json:"front-desk.url"` 
-			Dir string `json:"front-desk.dir"` 
+	Image        string `json:"Image"`
+	Name         string `json:"Name"`
+	RestartCount int    `json:"RestartCount"`
+	Config       struct {
+		Labels struct {
+			Name string  `json:"front-desk.name"`
+			Url  string  `json:"front-desk.url"`
+			Dir  string  `json:"front-desk.dir"`
 			Logo *string `json:"front-desk.logo"`
 		} `json:"Labels"`
 	} `json:"Config"`
@@ -41,9 +41,9 @@ func (c *Container) Translate() App {
 		Dir:     c.Config.Labels.Dir,
 		Logo:    c.Config.Labels.Logo,
 		State: struct {
-			Status     string `json:"status"`
-			ExitCode   int    `json:"exitCode"`
-			Error      string `json:"error"`
+			Status     string    `json:"status"`
+			ExitCode   int       `json:"exitCode"`
+			Error      string    `json:"error"`
 			StartedAt  time.Time `json:"startedAt"`
 			FinishedAt time.Time `json:"finishedAt"`
 		}{
@@ -54,6 +54,16 @@ func (c *Container) Translate() App {
 			FinishedAt: c.State.FinishedAt,
 		},
 	}
+}
+
+func (a *App) GetPath() (string, error) {
+	if a.Dir == "" {
+		return "", fmt.Errorf("this app has no path set")
+	}
+	if a.Dir[0] != '/' {
+		return "/" + a.Dir, nil
+	}
+	return a.Dir, nil
 }
 
 func (a *Container) GetApp() (*App, error) {
@@ -70,11 +80,11 @@ func (a *Container) GetApp() (*App, error) {
 		return nil, err
 	}
 
-	if len(containerList)==1 {
+	if len(containerList) == 1 {
 		app := containerList[0].Translate()
 		return &app, nil
 	}
-	
+
 	return nil, fmt.Errorf("%d containers returned for that ID", len(containerList))
 }
 
@@ -84,12 +94,13 @@ func (c *Container) GetCompose() (string, error) {
 	if err != nil {
 		return compose, err
 	}
-	var correctPath string
-	if app.Dir[0] != '/' {
-		correctPath = "/" + app.Dir
+
+	path, err := app.GetPath()
+	if err != nil {
+		return compose, err
 	}
-	
-	file, err := os.ReadFile("/src/apps"+correctPath+"/docker-compose.yml")
+
+	file, err := os.ReadFile("/src/apps" + path + "/docker-compose.yml")
 	if err != nil {
 		return compose, err
 	}
@@ -97,37 +108,38 @@ func (c *Container) GetCompose() (string, error) {
 	return compose, nil
 }
 
-func (c *Container) SaveCompose(compose struct{ Compose string `json:"compose"` }) error {
+func (c *Container) SaveCompose(compose struct {
+	Compose string `json:"compose"`
+}) error {
 	app, err := c.GetApp()
 	if err != nil {
 		return err
 	}
-	var correctPath string
-	if app.Dir[0] != '/' {
-		correctPath = "/" + app.Dir
+	path, err := app.GetPath()
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile("/src/apps"+path+"/docker-compose.yml", []byte(compose.Compose), 0644)
+	if err != nil {
+		fmt.Println("Error writing file:", err)
 	}
 
-	err = os.WriteFile("/src/apps"+correctPath+"/docker-compose.yml", []byte(compose.Compose), 0644)
-    if err != nil {
-        fmt.Println("Error writing file:", err)
-    }
-
-	return Rebuild(correctPath)
+	return Rebuild(path)
 }
 
 type App struct {
-	Id string `json:"id"` 
-	Created time.Time `json:"created"` 
-	Image string `json:"image"` 
-	Name string `json:"name"` 
-	Url string `json:"url"` 
-	Dir string `json:"dir"`
-	Logo *string `json:"logo"`
-	State struct {
-		Status string `json:"status"`
-		ExitCode int `json:"exitCode"`
-		Error string `json:"error"`
-		StartedAt time.Time `json:"startedAt"`
+	Id      string    `json:"id"`
+	Created time.Time `json:"created"`
+	Image   string    `json:"image"`
+	Name    string    `json:"name"`
+	Url     string    `json:"url"`
+	Dir     string    `json:"dir"`
+	Logo    *string   `json:"logo"`
+	State   struct {
+		Status     string    `json:"status"`
+		ExitCode   int       `json:"exitCode"`
+		Error      string    `json:"error"`
+		StartedAt  time.Time `json:"startedAt"`
 		FinishedAt time.Time `json:"finishedAt"`
 	} `json:"state"`
 }
@@ -146,12 +158,12 @@ func (a *App) GetList() ([]App, error) {
 	if err != nil {
 		return appList, err
 	}
-	
+
 	for _, container := range containerList {
 		appList = append(appList, container.Translate())
 	}
 
-	return appList, nil 
+	return appList, nil
 }
 
 func (a *App) ToggleOnOFF(id string, toggle string) error {
@@ -161,7 +173,7 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 		fmt.Println("Error:", err)
 		return err
 	}
-	
+
 	container := Container{ID: id}
 	app, err := container.GetApp()
 	if err != nil {
@@ -173,7 +185,7 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 }
 
 func Rebuild(path string) error {
-	err := os.Chdir("/src/apps"+path)
+	err := os.Chdir("/src/apps" + path)
 	if err != nil {
 		return err
 	}
