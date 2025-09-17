@@ -1,10 +1,12 @@
 package apps
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -31,6 +33,10 @@ type Container struct {
 	} `json:"Config"`
 }
 
+type Compose struct {
+	Compose string `json:"compose"`
+}
+
 func (c *Container) Translate() App {
 	return App{
 		Id:      c.ID,
@@ -54,16 +60,6 @@ func (c *Container) Translate() App {
 			FinishedAt: c.State.FinishedAt,
 		},
 	}
-}
-
-func (a *App) GetPath() (string, error) {
-	if a.Dir == "" {
-		return "", fmt.Errorf("this app has no path set")
-	}
-	if a.Dir[0] != '/' {
-		return "/" + a.Dir, nil
-	}
-	return a.Dir, nil
 }
 
 func (a *Container) GetApp() (*App, error) {
@@ -108,9 +104,7 @@ func (c *Container) GetCompose() (string, error) {
 	return compose, nil
 }
 
-func (c *Container) SaveCompose(compose struct {
-	Compose string `json:"compose"`
-}) error {
+func (c *Container) SaveCompose(compose Compose) error {
 	app, err := c.GetApp()
 	if err != nil {
 		return err
@@ -125,6 +119,40 @@ func (c *Container) SaveCompose(compose struct {
 	}
 
 	return Rebuild(path)
+}
+
+func (c *Container) Delete() error {
+	app, err := c.GetApp()
+	if err != nil {
+		return err
+	}
+	path, err := app.GetPath()
+	if err != nil {
+		return err
+	}
+
+	err = os.Chdir("/src/apps" + path)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("sh", "-c", "docker compose down --rmi all")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+
+	err = Prune()
+	if err != nil {
+		return err
+	}
+
+	err = os.RemoveAll("/src/apps" + path)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type App struct {
@@ -184,6 +212,61 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 
 }
 
+func (a *App) CreateApp(compose Compose) error {
+	var dir string
+	reader := strings.NewReader(compose.Compose)
+
+	scanner := bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "front-desk.dir:") {
+			parts := strings.Split(line, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid front-desk.dir label")
+			}
+			dir = strings.TrimSpace(parts[1])
+			if dir[0] != '/' {
+				dir = "/" + dir
+			}
+		}
+	}
+	err := os.Chdir("/src/apps")
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir(dir, 0777)
+	if err != nil {
+		return err
+	}
+
+	err = os.Chdir("/src/apps"+dir)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile("docker-compose.yml", []byte(compose.Compose), 0644)
+	if err != nil {
+		fmt.Println("Error writing file:", err)
+		return err
+	}
+
+	return Rebuild(dir)
+}
+
+func (a *App) GetPath() (string, error) {
+	if a.Dir == "" {
+		return "", fmt.Errorf("this app has no path set")
+	}
+	if a.Dir[0] != '/' {
+		return "/" + a.Dir, nil
+	}
+	
+	return a.Dir, nil
+}
+
+
 func Rebuild(path string) error {
 	err := os.Chdir("/src/apps" + path)
 	if err != nil {
@@ -197,4 +280,10 @@ func Rebuild(path string) error {
 		return err
 	}
 	return nil
+}
+
+func Prune() error {
+	cmd := exec.Command("sh", "-c", "docker system prune")
+	_, err := cmd.CombinedOutput()
+	return err
 }
