@@ -178,10 +178,10 @@ func SaveCompose(c echo.Context) error {
 	}
 	
 	container := apps.Container{ID: id}
-	err = container.SaveCompose(data)
+	newApp, err := container.SaveCompose(data)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: newApp})
 }

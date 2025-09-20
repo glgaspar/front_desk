@@ -106,8 +106,9 @@ func (a *App) CreateApp(compose Compose) error {
 		fmt.Println("Error writing file:", err)
 		return err
 	}
-
-	return Rebuild(dir)
+	newApp, err:= Rebuild(dir)
+	*a = *newApp
+	return err
 }
 
 func (a *App) GetPath() (string, error) {

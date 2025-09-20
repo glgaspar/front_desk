@@ -102,14 +102,14 @@ func (c *Container) GetCompose() (string, error) {
 	return compose, nil
 }
 
-func (c *Container) SaveCompose(compose Compose) error {
+func (c *Container) SaveCompose(compose Compose) (*App, error) {
 	app, err := c.GetApp()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	path, err := app.GetPath()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = os.WriteFile("/src/apps"+path+"/docker-compose.yml", []byte(compose.Compose), 0644)
 	if err != nil {
