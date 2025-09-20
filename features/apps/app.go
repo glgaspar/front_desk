@@ -103,8 +103,11 @@ func (a *App) CreateApp(compose Compose) error {
 		return err
 	}
 	newApp, err:= Rebuild(dir)
+	if err != nil {
+		return err
+	}
 	*a = *newApp
-	return err
+	return nil
 }
 
 func (a *App) GetPath() (string, error) {
