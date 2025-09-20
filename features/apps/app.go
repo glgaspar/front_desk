@@ -34,7 +34,7 @@ func (a *App) GetList() ([]App, error) {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return appList, err
+		return appList, fmt.Errorf("\n%s", cmd.Stdout)
 	}
 
 	err = json.Unmarshal(output, &containerList)
@@ -54,7 +54,7 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 	_, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return err
+		return fmt.Errorf("\n%s", cmd.Stdout)
 	}
 
 	container := Container{ID: id}

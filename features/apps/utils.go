@@ -13,8 +13,7 @@ func Rebuild(path string) (*App, error) {
 	cmd := exec.Command("sh", "-c", "docker compose up -d --build")
 	_, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
-		return nil, err
+		return nil, fmt.Errorf("\n%s", cmd.Stdout)
 	}
 
 	var containerList []Container
@@ -22,11 +21,11 @@ func Rebuild(path string) (*App, error) {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return nil, err
+		return nil, fmt.Errorf("\n%s", cmd.Stdout)
 	}
 
 	err = json.Unmarshal(output, &containerList)
-	if err != nil {
+	if err != nil {		
 		return nil, err
 	}
 	
@@ -42,5 +41,8 @@ func Rebuild(path string) (*App, error) {
 func Prune() error {
 	cmd := exec.Command("sh", "-c", "docker system prune")
 	_, err := cmd.CombinedOutput()
-	return err
+	if err != nil {
+		return fmt.Errorf("\n%s", cmd.Stdout)
+	}
+	return nil
 }

@@ -65,7 +65,7 @@ func (a *Container) GetApp() (*App, error) {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return nil, err
+		return nil, fmt.Errorf("\n%s", cmd.Stdout)
 	}
 	var containerList []Container
 
@@ -137,7 +137,7 @@ func (c *Container) RemoveContainer() error {
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return err
+		return fmt.Errorf("\n%s", cmd.Stdout)
 	}
 
 	err = Prune()
