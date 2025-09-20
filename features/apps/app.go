@@ -86,12 +86,8 @@ func (a *App) CreateApp(compose Compose) error {
 			}
 		}
 	}
-	err := os.Chdir("/src/apps")
-	if err != nil {
-		return err
-	}
 
-	err = os.Mkdir(dir, 0777)
+	err := os.Mkdir("/src/apps"+dir, 0777)
 	if err != nil {
 		return err
 	}
