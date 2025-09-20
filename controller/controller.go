@@ -185,3 +185,39 @@ func SaveCompose(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: newApp})
 }
+
+func CreateApp(c echo.Context) error {
+	var data apps.Compose
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	
+	app := apps.App{}
+	err = app.CreateApp(data)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: app})
+}
+
+func RemoveContainer(c echo.Context) error {
+	id := c.Param("id")
+	if  id == "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
+	}
+
+	container := apps.Container{ID: id}
+	err := container.RemoveContainer()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}

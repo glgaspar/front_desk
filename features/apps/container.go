@@ -119,7 +119,7 @@ func (c *Container) SaveCompose(compose Compose) (*App, error) {
 	return Rebuild(path)
 }
 
-func (c *Container) Delete() error {
+func (c *Container) RemoveContainer() error {
 	app, err := c.GetApp()
 	if err != nil {
 		return err

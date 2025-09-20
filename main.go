@@ -93,6 +93,8 @@ func main() {
 	e.PUT("/apps/toggleOnOff/:id/:toggle", controller.AppsToggleOnOFF)
 	e.GET("/apps/compose/:id", controller.GetCompose)
 	e.POST("/apps/compose/:id", controller.SaveCompose)
+	e.POST("/apps/create", controller.CreateApp)
+	e.DELETE("/apps/remove/:id", controller.RemoveContainer)
 
 	e.GET("/system/usage", controller.GetSystemUsage)
 	
