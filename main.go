@@ -65,7 +65,11 @@ func main() {
 
 	if err := controller.CheckForUsers(); err != nil { // just setting stuff up
 		panic(err)
-	} 
+	}
+	if err := controller.CheckForCloudflare(); err != nil { // just setting more stuff up
+		panic(err)
+	}
+
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -98,6 +102,8 @@ func main() {
 
 	e.GET("/system/usage", controller.GetSystemUsage)
 	
+	e.POST("/config/cloudflare", controller.SetCloudflare)
+	e.GET("/config/cloudflare", controller.GetCloudflare)
 
 
 	e.Logger.Fatal(e.Start(":8080"))

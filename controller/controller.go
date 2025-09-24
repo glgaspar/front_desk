@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/glgaspar/front_desk/features/apps"
+	"github.com/glgaspar/front_desk/features/cloudflare"
 	"github.com/glgaspar/front_desk/features/login"
 	"github.com/glgaspar/front_desk/features/system"
 	"github.com/labstack/echo/v4"
@@ -166,7 +168,7 @@ func SaveCompose(c echo.Context) error {
 	if  id == "" {
 		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
 	}
-	var data struct{ Compose string `json:"compose"` }
+	var data apps.Compose
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
@@ -220,4 +222,38 @@ func RemoveContainer(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}
+
+func SetCloudflare(c echo.Context) error {
+	var data cloudflare.Config
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	
+	err = data.SetCloudflare()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+} 
+
+func GetCloudflare(c echo.Context) error {
+	data := false
+	set := os.Getenv("CLOUDFLARE")
+	if set == "TRUE" {
+		data = true
+	}
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
+} 
+
+func CheckForCloudflare() error {
+	data := new(cloudflare.Config)
+	return data.CheckForCloudflare()
 }
