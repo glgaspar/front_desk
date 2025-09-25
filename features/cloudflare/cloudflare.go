@@ -35,26 +35,39 @@ func (c *Config) SetCloudflare() error {
 	}
 	defer conn.Close()
 
-	query := `
-	delete from adm.cloudflare
-	insert into adm.cloudflare (accountId, tunnelId, cloudflareAPIToken, localAddress, zoneId)
-	values($1,$2,$3,$4,$5)
-	`
-
-	_, err = conn.Exec(query, c.AccountId, c.TunnelId, c.CloudflareAPIToken, c.LocalAddress, c.ZoneId)
-	if err != nil {
-		return err
-	}
-
-	os.Setenv("CLOUDFLARE", "TRUE")
 	os.Setenv("CLOUDFLARE_ACCOUNT_ID", c.AccountId)
 	os.Setenv("CLOUDFLARE_TUNNEL_ID", c.TunnelId)
 	os.Setenv("CLOUDFLARE_API_TOKEN", c.CloudflareAPIToken)
 	os.Setenv("CLOUDFLARE_LOCAL_ADDRESS", c.LocalAddress)
 	os.Setenv("CLOUDFLARE_ZONE_ID", c.ZoneId)
+	
+	tran, err := conn.Begin()
+	if err != nil {
+		return err
+	}
+	
+	query := `
+	delete from adm.cloudflare;
+	`
+	_, err = tran.Exec(query)
+	if err != nil {
+		tran.Rollback()
+		return err 
+	}
 
+	query = `
+	insert into adm.cloudflare (accountId, tunnelId, cloudflareAPIToken, localAddress, zoneId)
+	values($1,$2,$3,$4,$5);
+	`
+	_, err = tran.Exec(query, c.AccountId, c.TunnelId, c.CloudflareAPIToken, c.LocalAddress, c.ZoneId)
+	if err != nil {
+		tran.Rollback()
+		return err 
+	}
 
-	return nil
+	os.Setenv("CLOUDFLARE", "TRUE")
+	
+	return tran.Commit()
 }
 
 func (c *Config) CheckForCloudflare() error {
