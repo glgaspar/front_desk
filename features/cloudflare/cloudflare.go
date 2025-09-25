@@ -53,7 +53,7 @@ func (c *Config) CheckForCloudflare() error {
 	from adm.cloudflare
 	`
 
-	rows, err := conn.Query(query, c.AccountId, c.TunnelId, c.CloudflareAPIToken, c.Hostname)
+	rows, err := conn.Query(query)
 	if err != nil {
 		return err
 	}
