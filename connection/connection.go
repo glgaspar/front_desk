@@ -33,7 +33,7 @@ func Db() (*sql.DB, error) {
 	return conn, err
 }
 
-func Api(method string, url string, headers map[string]string, data *any) (*[]byte, error) {
+func Api(method string, url string, headers map[string]string, data any) (*[]byte, error) {
 	payload := &bytes.Buffer{}
 	if data != nil {
 		payloadBuffer, err := json.Marshal(data)

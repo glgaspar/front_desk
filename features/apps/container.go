@@ -28,6 +28,7 @@ type Container struct {
 			Url  string  `json:"front-desk.url"`
 			Dir  string  `json:"front-desk.dir"`
 			Logo *string `json:"front-desk.logo"`
+			Port *string `json:"front-desk.cloudflare-port"`
 		} `json:"Labels"`
 	} `json:"Config"`
 }
@@ -120,7 +121,7 @@ func (c *Container) SaveCompose(compose Compose) (*App, error) {
 
 	if compose.Tunnel != nil && *compose.Tunnel {
 		cloudflareConfig := new(cloudflare.Config)
-		err = cloudflareConfig.CreateTunnel()
+		err = cloudflareConfig.CreateTunnel(app.Url, *c.Config.Labels.Port)
 		if err != nil {
 			return nil, err
 		}
