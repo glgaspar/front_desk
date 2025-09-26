@@ -1,6 +1,7 @@
 package cloudflare
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -19,6 +20,11 @@ type tunnelConfigBody struct {
 	} `json:"config"`
 }
 
+type tunnelConfigResponse struct {
+	Success bool               `json:"success"`
+	Errors  []interface{}      `json:"errors"`
+	Result  tunnelConfigBody `json:"result"`
+}
 
 type Config struct {
 	AccountId          string `json:"accountId" db:"accountId"`
@@ -45,7 +51,7 @@ func (c *Config) SetCloudflare() error {
 	if err != nil {
 		return err
 	}
-	
+
 	query := `
 	delete from adm.cloudflare;
 	`
@@ -108,56 +114,66 @@ func (c *Config) CreateTunnel(hostname string, localPort string) error {
 	}
 
 	localAddress := os.Getenv("CLOUDFLARE_LOCAL_ADDRESS")
-	if localAddress == "" {
-		return fmt.Errorf("cloudflare localAddress is not set")
-	}
-
 	token := os.Getenv("CLOUDFLARE_API_TOKEN")
-	if token == "" {
-		return fmt.Errorf("cloudflare api token is not set")
-	}
-
 	accountId := os.Getenv("CLOUDFLARE_ACCOUNT_ID")
-	if accountId == "" {
-		return fmt.Errorf("cloudflare account id is not set")
-	}
-
 	tunnelId := os.Getenv("CLOUDFLARE_TUNNEL_ID")
-	if tunnelId == "" {
-		return fmt.Errorf("cloudflare tunnel id is not set")
-	}
-
 	zoneId := os.Getenv("CLOUDFLARE_ZONE_ID")
-	if zoneId == "" {
-		return fmt.Errorf("cloudflare zone id is not set")
+
+	for _, val := range []struct {
+		name, val string
+	}{
+		{"cloudflare localAddress", localAddress},
+		{"cloudflare api token", token},
+		{"cloudflare account id", accountId},
+		{"cloudflare tunnel id", tunnelId},
+		{"cloudflare zone id", zoneId},
+	} {
+		if val.val == "" {
+			return fmt.Errorf("%s is not set", val.name)
+		}
 	}
 
+	ingress, err := getTunnelIngress(token, accountId, tunnelId)
+	if err != nil {
+		return err
+	}
 
-	ingress := []ingressRule{
-		{
-			Hostname: &hostname,
-			Service:  "http://" + localAddress + ":" + localPort,
-			OriginRequest: map[string]interface{}{"noTLSVerify": true},
-		},
-		{
-			Service: "http_status:404",
-		},
+	alreadyExists := false
+	for _, rule := range ingress {
+		if rule.Hostname != nil && *rule.Hostname == hostname {
+			alreadyExists = true
+			break
+		}
+	}
+
+	if !alreadyExists {
+		ingress = append([]ingressRule{
+			{
+				Hostname: &hostname,
+				Service:  "http://" + localAddress + ":" + localPort,
+				OriginRequest: map[string]interface{}{
+					"noTLSVerify": true,
+				},
+			},
+		}, ingress...)
 	}
 
 	body := tunnelConfigBody{}
 	body.Config.Ingress = ingress
+
 	url := fmt.Sprintf(
-        "https://api.cloudflare.com/client/v4/accounts/%s/cfd_tunnel/%s/configurations",
-        accountId, tunnelId,
-    )
+		"https://api.cloudflare.com/client/v4/accounts/%s/cfd_tunnel/%s/configurations",
+		accountId, tunnelId,
+	)
+
 	headers := map[string]string{
 		"Authorization": "Bearer " + token,
 		"Content-Type":  "application/json",
 	}
-	
-	_, err := connection.Api("PUT", url, headers, body)
+
+	_, err = connection.Api("PUT", url, headers, body)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update tunnel ingress config: %w", err)
 	}
 
 	url = fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records", zoneId)
@@ -165,13 +181,42 @@ func (c *Config) CreateTunnel(hostname string, localPort string) error {
 		"type":    "CNAME",
 		"name":    hostname,
 		"content": tunnelId + ".cfargotunnel.com",
-		"ttl":     1,   // Auto
+		"ttl":     1,
 		"proxied": true,
 	}
+
 	_, err = connection.Api("POST", url, headers, payload)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create DNS record: %w", err)
 	}
-	
+
 	return nil
+}
+
+func getTunnelIngress(token, accountId, tunnelId string) ([]ingressRule, error) {
+	url := fmt.Sprintf(
+		"https://api.cloudflare.com/client/v4/accounts/%s/cfd_tunnel/%s/configurations",
+		accountId, tunnelId,
+	)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json",
+	}
+
+	respBytes, err := connection.Api("GET", url, headers, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch tunnel config: %w", err)
+	}
+
+	var parsed tunnelConfigResponse
+	if err := json.Unmarshal(*respBytes, &parsed); err != nil {
+		return nil, fmt.Errorf("failed to parse tunnel config JSON: %w", err)
+	}
+
+	if !parsed.Success {
+		return nil, fmt.Errorf("cloudflare API error: %+v", parsed.Errors)
+	}
+
+	return parsed.Result.Config.Ingress, nil
 }
