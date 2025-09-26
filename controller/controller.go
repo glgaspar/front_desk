@@ -92,7 +92,10 @@ func LoginValidator(c *http.Cookie) (bool, error) {
 func Logout(c echo.Context) error {
 	var user login.LoginUser
 	cookie, err := c.Cookie("front_desk_awesome_cookie")
-
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	
 	err = user.Logout(cookie)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
