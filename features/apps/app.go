@@ -114,6 +114,10 @@ func (a *App) CreateApp(compose Compose) error {
 	if err != nil {
 		return err
 	}
+
+	if (*container).Config.Labels.Port == nil {
+		return fmt.Errorf("App was created but no port provided to for tunnel")
+	}
 	
 	if compose.Tunnel != nil && *compose.Tunnel {
 		cloudflareConfig := new(cloudflare.Config)
