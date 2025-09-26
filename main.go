@@ -99,6 +99,7 @@ func main() {
 	e.POST("/apps/compose/:id", controller.SaveCompose)
 	e.POST("/apps/create", controller.CreateApp)
 	e.DELETE("/apps/remove/:id", controller.RemoveContainer)
+	e.GET("/apps/logs/:id", controller.GetLogs)
 
 	e.GET("/system/usage", controller.GetSystemUsage)
 	

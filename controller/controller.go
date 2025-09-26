@@ -257,3 +257,43 @@ func CheckForCloudflare() error {
 	data := new(cloudflare.Config)
 	return data.CheckForCloudflare()
 }
+
+func GetLogs(c echo.Context) error {
+	id := c.Param("id")
+	if  id == "" {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: "Id must be sent"})
+	}
+
+	logs := make(chan string)
+	app := &apps.App{Id: id}
+	
+	container, err := app.GetContainer()
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	
+	app, err = container.GetApp()
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	c.Response().Header().Set("Content-Type", "text/event-stream")
+	c.Response().Header().Set("Cache-Control", "no-cache")
+	c.Response().Header().Set("Connection", "keep-alive")
+	go func() {
+		for {
+			select {
+			case line := <-logs:
+				c.Response().Write([]byte(line))
+				c.Response().Flush()
+			case <-c.Request().Context().Done():
+				return
+			}
+		}
+	}()
+
+	err = app.GetLogs(logs)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	return nil
+}

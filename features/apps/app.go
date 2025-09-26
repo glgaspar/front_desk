@@ -168,3 +168,37 @@ func(a *App) GetContainer() (*Container, error) {
 
 	return nil, fmt.Errorf("%d containers returned for that ID", len(containerList))
 }	
+
+
+func (a *App) GetLogs(channel chan string) error {
+	err := os.Chdir("/src/apps"+a.Dir)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command("docker", "compose", "logs", "-f")
+	
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("error creating StdoutPipe: %v", err)
+	}
+	
+	cmd.Stderr = cmd.Stdout
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("error starting command: %v", err)
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	go func() {
+		for scanner.Scan() {
+			line := scanner.Text()
+			channel <- line
+		}
+	}()
+
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("command finished with error: %v", err)
+	}
+	return nil
+}
