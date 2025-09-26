@@ -151,9 +151,6 @@ func (c *Config) CreateTunnel(hostname string, localPort string) error {
 			{
 				Hostname: &hostname,
 				Service:  "http://" + localAddress + ":" + localPort,
-				OriginRequest: map[string]interface{}{
-					"noTLSVerify": true,
-				},
 			},
 		}, ingress...)
 	}
