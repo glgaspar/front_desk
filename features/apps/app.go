@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/glgaspar/front_desk/features/cloudflare"
 )
 
 type App struct {
@@ -107,6 +109,20 @@ func (a *App) CreateApp(compose Compose) error {
 		return err
 	}
 	*a = *newApp
+	
+	container, err := a.GetContainer()
+	if err != nil {
+		return err
+	}
+	
+	if compose.Tunnel != nil && *compose.Tunnel {
+		cloudflareConfig := new(cloudflare.Config)
+		err = cloudflareConfig.CreateTunnel(strings.Replace(a.Url,"https://", "",1), *container.Config.Labels.Port)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -121,3 +137,30 @@ func (a *App) GetPath() (string, error) {
 	return a.Dir, nil
 }
 
+
+func(a *App) GetContainer() (*Container, error) {
+	err := os.Chdir("/src/apps"+a.Dir)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.Command("sh", "-c", "docker inspect $(docker compose ps -q)")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return nil, fmt.Errorf("\n%s", cmd.Stdout)
+	}
+
+	var containerList []Container
+
+	err = json.Unmarshal(output, &containerList)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(containerList) == 1 {
+		return &containerList[0], nil
+	}
+
+	return nil, fmt.Errorf("%d containers returned for that ID", len(containerList))
+}	

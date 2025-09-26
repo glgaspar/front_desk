@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"time"
-	"github.com/glgaspar/front_desk/features/cloudflare"
 )
 
 type Container struct {
@@ -117,14 +116,6 @@ func (c *Container) SaveCompose(compose Compose) (*App, error) {
 	err = os.WriteFile("/src/apps"+path+"/docker-compose.yml", []byte(compose.Compose), 0644)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
-	}
-
-	if compose.Tunnel != nil && *compose.Tunnel {
-		cloudflareConfig := new(cloudflare.Config)
-		err = cloudflareConfig.CreateTunnel(app.Url, *c.Config.Labels.Port)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return Rebuild(path)
