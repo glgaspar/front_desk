@@ -277,17 +277,17 @@ func GetLogs(c echo.Context) error {
 	c.Response().Header().Set("Content-Type", "text/event-stream")
 	c.Response().Header().Set("Cache-Control", "no-cache")
 	c.Response().Header().Set("Connection", "keep-alive")
-	go func() {
+	go func(c *echo.Context) {
 		for {
 			select {
 			case line := <-logs:
-				c.Response().Write([]byte(line))
-				c.Response().Flush()
-			case <-c.Request().Context().Done():
+				(*c).Response().Write([]byte(line))
+				(*c).Response().Flush()
+			case <-(*c).Request().Context().Done():
 				return
 			}
 		}
-	}()
+	}(&c)
 
 	err = app.GetLogs(&logs)
 	if err != nil {
