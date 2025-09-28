@@ -202,3 +202,38 @@ func (a *App) GetLogs(channel chan string) error {
 	}
 	return nil
 }
+
+func (a *App) GetApp() error {
+	if a.Id == "" && a.Dir == "" {
+		return fmt.Errorf("either id or dir must be provided to reach app")
+	}
+	command := "docker logs -f " + a.Id 
+	if a.Dir != "" {
+		err := os.Chdir("/src/apps"+a.Dir)
+		if err != nil {
+			return err
+		}
+		command = "docker compose logs -f"
+	}
+
+	cmd := exec.Command("sh", "-c", command)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return fmt.Errorf("\n%s", cmd.Stdout)
+	}
+	var containerList []Container
+
+	err = json.Unmarshal(output, &containerList)
+	if err != nil {
+		return err
+	}
+
+	if len(containerList) == 1 {
+		app := containerList[0].Translate()
+		*a = app
+		return nil
+	}
+
+	return fmt.Errorf("%d containers returned for that ID", len(containerList))
+}

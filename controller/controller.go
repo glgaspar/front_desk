@@ -268,14 +268,9 @@ func GetLogs(c echo.Context) error {
 	}
 
 	logs := make(chan string)
-	app := &apps.App{Id: id}
+	app := apps.App{Id: id}
 	
-	container, err := app.GetContainer()
-	if err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-	
-	app, err = container.GetApp()
+	err := app.GetApp()
 	if err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
