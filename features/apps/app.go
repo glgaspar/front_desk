@@ -94,7 +94,7 @@ func (a *App) CreateApp(compose Compose) error {
 		return err
 	}
 
-	err = os.Chdir("/src/apps"+dir)
+	err = os.Chdir("/src/apps" + dir)
 	if err != nil {
 		return err
 	}
@@ -104,12 +104,12 @@ func (a *App) CreateApp(compose Compose) error {
 		fmt.Println("Error writing file:", err)
 		return err
 	}
-	newApp, err:= Rebuild(dir)
+	newApp, err := Rebuild(dir)
 	if err != nil {
 		return err
 	}
 	*a = *newApp
-	
+
 	container, err := a.GetContainer()
 	if err != nil {
 		return err
@@ -118,10 +118,10 @@ func (a *App) CreateApp(compose Compose) error {
 	if (*container).Config.Labels.Port == nil {
 		return fmt.Errorf("App was created but no port provided to for tunnel")
 	}
-	
+
 	if compose.Tunnel != nil && *compose.Tunnel {
 		cloudflareConfig := new(cloudflare.Config)
-		err = cloudflareConfig.CreateTunnel(strings.Replace(a.Url,"https://", "",1), *container.Config.Labels.Port)
+		err = cloudflareConfig.CreateTunnel(strings.Replace(a.Url, "https://", "", 1), *container.Config.Labels.Port)
 		if err != nil {
 			return err
 		}
@@ -137,13 +137,12 @@ func (a *App) GetPath() (string, error) {
 	if a.Dir[0] != '/' {
 		return "/" + a.Dir, nil
 	}
-	
+
 	return a.Dir, nil
 }
 
-
-func(a *App) GetContainer() (*Container, error) {
-	err := os.Chdir("/src/apps"+a.Dir)
+func (a *App) GetContainer() (*Container, error) {
+	err := os.Chdir("/src/apps" + a.Dir)
 	if err != nil {
 		return nil, err
 	}
@@ -167,22 +166,21 @@ func(a *App) GetContainer() (*Container, error) {
 	}
 
 	return nil, fmt.Errorf("%d containers returned for that ID", len(containerList))
-}	
-
+}
 
 func (a *App) GetLogs(channel *chan string) error {
-	err := os.Chdir("/src/apps"+a.Dir)
+	err := os.Chdir("/src/apps" + a.Dir)
 	if err != nil {
 		return err
 	}
 
 	cmd := exec.Command("docker", "compose", "logs", "-f")
-	
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("error creating StdoutPipe: %v", err)
 	}
-	
+
 	cmd.Stderr = cmd.Stdout
 
 	if err := cmd.Start(); err != nil {
@@ -207,13 +205,15 @@ func (a *App) GetApp() error {
 	if a.Id == "" && a.Dir == "" {
 		return fmt.Errorf("either id or dir must be provided to reach app")
 	}
-	command := "docker logs -f " + a.Id 
+	var command string
 	if a.Dir != "" {
-		err := os.Chdir("/src/apps"+a.Dir)
+		err := os.Chdir("/src/apps" + a.Dir)
 		if err != nil {
 			return err
 		}
-		command = "docker compose logs -f"
+		command = "docker inspect $(docker compose ps -q)"
+	} else {
+		command = "docker inspect " + a.Id
 	}
 
 	cmd := exec.Command("sh", "-c", command)
