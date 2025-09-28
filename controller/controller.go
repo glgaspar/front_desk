@@ -280,7 +280,12 @@ func GetLogs(c echo.Context) error {
 	go func(c *echo.Context, logs *chan string) {
 		for {
 			select {
-			case line := <-*logs:
+			case line, ok := <-*logs:
+				if !ok { 
+					(*c).Response().Write([]byte("conecction close"))
+					(*c).Response().Flush()
+					return
+				}
 				(*c).Response().Write([]byte(line))
 				(*c).Response().Flush()
 			case <-(*c).Request().Context().Done():

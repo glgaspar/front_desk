@@ -188,12 +188,12 @@ func (a *App) GetLogs(channel *chan string) error {
 	}
 
 	scanner := bufio.NewScanner(stdout)
-	go func() {
+	go func(scanner *bufio.Scanner, channel *chan string) {
 		for scanner.Scan() {
 			line := scanner.Text()
 			*channel <- line
 		}
-	}()
+	}(scanner, channel)
 
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("command finished with error: %v", err)
