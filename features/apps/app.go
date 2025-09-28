@@ -170,7 +170,7 @@ func(a *App) GetContainer() (*Container, error) {
 }	
 
 
-func (a *App) GetLogs(channel chan string) error {
+func (a *App) GetLogs(channel *chan string) error {
 	err := os.Chdir("/src/apps"+a.Dir)
 	if err != nil {
 		return err
@@ -193,7 +193,7 @@ func (a *App) GetLogs(channel chan string) error {
 	go func() {
 		for scanner.Scan() {
 			line := scanner.Text()
-			channel <- line
+			*channel <- line
 		}
 	}()
 

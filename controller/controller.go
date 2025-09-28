@@ -289,7 +289,7 @@ func GetLogs(c echo.Context) error {
 		}
 	}()
 
-	err = app.GetLogs(logs)
+	err = app.GetLogs(&logs)
 	if err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
