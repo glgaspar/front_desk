@@ -169,12 +169,7 @@ func (a *App) GetContainer() (*Container, error) {
 }
 
 func (a *App) GetLogs(channel *chan string) error {
-	err := os.Chdir("/src/apps" + a.Dir)
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("docker", "compose", "logs", "-f")
+	cmd := exec.Command("docker", "logs", "-f", a.Id)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
