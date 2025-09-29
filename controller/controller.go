@@ -15,9 +15,9 @@ import (
 )
 
 type Response struct {
-	Status 	bool	  	`json:"status"`
-	Message string 		`json:"message"`
-	Data 	interface{} `json:"data"`
+	Status  bool        `json:"status"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
 func CheckForUsers() error {
@@ -95,7 +95,7 @@ func Logout(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
-	
+
 	err = user.Logout(cookie)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
@@ -132,7 +132,7 @@ func AppsToggleOnOFF(c echo.Context) error {
 	if (toggle != "start" && toggle != "stop") || id == "" {
 		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Both Id (str) and toggle (\"start\", \"stop\") must be sent"})
 	}
-	
+
 	var app = new(apps.App)
 	err := app.ToggleOnOFF(id, toggle)
 	if err != nil {
@@ -153,10 +153,10 @@ func GetSystemUsage(c echo.Context) error {
 
 func GetCompose(c echo.Context) error {
 	id := c.Param("id")
-	if  id == "" {
+	if id == "" {
 		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
 	}
-	
+
 	container := apps.Container{ID: id}
 	data, err := container.GetCompose()
 	if err != nil {
@@ -168,7 +168,7 @@ func GetCompose(c echo.Context) error {
 
 func SaveCompose(c echo.Context) error {
 	id := c.Param("id")
-	if  id == "" {
+	if id == "" {
 		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
 	}
 	var data apps.Compose
@@ -181,7 +181,7 @@ func SaveCompose(c echo.Context) error {
 	if err := json.Unmarshal(body, &data); err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
-	
+
 	container := apps.Container{ID: id}
 	newApp, err := container.SaveCompose(data)
 	if err != nil {
@@ -202,7 +202,7 @@ func CreateApp(c echo.Context) error {
 	if err := json.Unmarshal(body, &data); err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
-	
+
 	app := apps.App{}
 	err = app.CreateApp(data)
 	if err != nil {
@@ -214,7 +214,7 @@ func CreateApp(c echo.Context) error {
 
 func RemoveContainer(c echo.Context) error {
 	id := c.Param("id")
-	if  id == "" {
+	if id == "" {
 		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
 	}
 
@@ -238,14 +238,14 @@ func SetCloudflare(c echo.Context) error {
 	if err := json.Unmarshal(body, &data); err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
-	
+
 	err = data.SetCloudflare()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
-} 
+}
 
 func GetCloudflare(c echo.Context) error {
 	data := false
@@ -254,7 +254,7 @@ func GetCloudflare(c echo.Context) error {
 		data = true
 	}
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
-} 
+}
 
 func CheckForCloudflare() error {
 	data := new(cloudflare.Config)
@@ -263,13 +263,13 @@ func CheckForCloudflare() error {
 
 func GetLogs(c echo.Context) error {
 	id := c.Param("id")
-	if  id == "" {
+	if id == "" {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: "Id must be sent"})
 	}
 
 	logs := make(chan string)
 	app := apps.App{Id: id}
-	
+
 	err := app.GetApp()
 	if err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
@@ -281,12 +281,12 @@ func GetLogs(c echo.Context) error {
 		for {
 			select {
 			case line, ok := <-*logs:
-				if !ok { 
-					(*c).Response().Write([]byte("conecction close"))
+				if !ok {
+					(*c).Response().Write([]byte("data: [connection closed]\n\n"))
 					(*c).Response().Flush()
 					return
 				}
-				(*c).Response().Write([]byte(line))
+				fmt.Fprintf((*c).Response(), "data: %s\n\n", line)
 				(*c).Response().Flush()
 			case <-(*c).Request().Context().Done():
 				return
@@ -300,6 +300,6 @@ func GetLogs(c echo.Context) error {
 		c.Response().Flush()
 		return err
 	}
-	
+
 	return nil
 }
