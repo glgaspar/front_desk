@@ -63,13 +63,33 @@ func main() {
 		log.Printf("error reading .env %s", err.Error())
 	}
 
-	if err := controller.CheckForUsers(); err != nil { // just setting stuff up
-		panic(err)
-	}
-	if err := controller.CheckForCloudflare(); err != nil { // just setting more stuff up
-		panic(err)
-	}
+	redBg := "\033[41m"
+	greenBg := "\033[42m"
+	reset := "\033[0m"
 
+	log.Println("checking database tables... ")
+	if err := controller.CreateDatabase(); err != nil {
+		log.Printf("%sFAILED%s: %v", redBg, reset, err)
+		panic(err)
+	}
+	log.Printf("%sOK%s", greenBg, reset)
+
+	log.Println("checking for users... ")
+	if err := controller.CheckForUsers(); err != nil {
+		log.Printf("%sFAILED%s: %v", redBg, reset, err)
+		panic(err)
+	}
+	log.Printf("%sOK%s", greenBg, reset)
+
+	log.Println("checking for cloudflare... ")
+	if err := controller.CheckForCloudflare(); err != nil {
+		log.Printf("%sFAILED%s: %v", redBg, reset, err)
+		panic(err)
+	}
+	log.Printf("%sOK%s", greenBg, reset)
+
+	log.Printf("%sall checks done%s", greenBg, reset)
+	log.Println("starting server")
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{

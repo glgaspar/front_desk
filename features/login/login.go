@@ -6,11 +6,44 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/glgaspar/front_desk/connection"
 	"github.com/google/uuid"
 )
+
+func CreateDatabase() error {
+	conn, err := connection.Db()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	var queries []string
+	file, err := os.ReadFile("/src/connection/db.sql")
+	if err != nil {
+		return err
+	}
+
+	queries = append(queries, strings.Split(string(file), ";")...)
+
+	tx, err := conn.Begin()
+	if err != nil {
+		return err
+	}
+
+	for _, query := range queries {
+		_, err := tx.Exec(query)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
+
+}
 
 func LoginValidator(cookie string) (bool, error) {
 	var valid bool

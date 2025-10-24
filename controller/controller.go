@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -18,6 +19,10 @@ type Response struct {
 	Status  bool        `json:"status"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
+}
+
+func CreateDatabase() error {
+	return login.CreateDatabase()
 }
 
 func CheckForUsers() error {
@@ -258,6 +263,11 @@ func GetCloudflare(c echo.Context) error {
 
 func CheckForCloudflare() error {
 	data := new(cloudflare.Config)
+	if os.Getenv("CLOUDFLARE")=="TRUE" {
+		log.Println("cloudflare available")
+	} else {
+		log.Println("cloudflare not available")
+	}
 	return data.CheckForCloudflare()
 }
 
