@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS adm.activesessions (
     expire timestamp not null,
 	CONSTRAINT activesessions_pkey PRIMARY KEY (token)
 );
-ALTER TABLE adm.activesessions ADD CONSTRAINT IF NOT EXISTS activesessions_userid_fkey FOREIGN KEY (userid) REFERENCES adm.users(id) ON DELETE CASCADE;
+alter table adm.activesessions
+drop constraint if exists activesessions_userid_fkey;
+ALTER TABLE adm.activesessions ADD CONSTRAINT  activesessions_userid_fkey FOREIGN KEY (userid) REFERENCES adm.users(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS adm.cloudflare (
     config_id int4 NOT NULL DEFAULT 1,
