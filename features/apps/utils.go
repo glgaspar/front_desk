@@ -9,7 +9,7 @@ import (
 )
 
 func Rebuild(path string) (*App, error) {
-	os.Chdir("/mnt/apps"+path)
+	os.Chdir("/mnt/apps" + path)
 	cmd := exec.Command("sh", "-c", "docker compose up -d --build")
 	_, err := cmd.CombinedOutput()
 	if err != nil {
@@ -18,17 +18,20 @@ func Rebuild(path string) (*App, error) {
 
 	var containerList []Container
 	cmd = exec.Command("sh", "-c", "docker inspect $(docker compose ps -q)")
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return nil, fmt.Errorf("\n%s", cmd.Stdout)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("\n%s", exitErr.Stderr)
+		}
+		return nil, err
 	}
 
 	err = json.Unmarshal(output, &containerList)
-	if err != nil {		
+	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(containerList) != 1 {
 		return nil, errors.New("could no retrive data from new container. Please refresh the page")
 	}

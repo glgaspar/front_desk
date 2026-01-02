@@ -33,10 +33,16 @@ func (a *App) GetList() ([]App, error) {
 	var appList []App
 	var containerList []Container
 	cmd := exec.Command("sh", "-c", "docker inspect $(docker ps -a -q)")
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.Output()
 	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if strings.Contains(string(exitErr.Stderr), "requires at least 1 argument") {
+				return appList, nil
+			}
+			return appList, fmt.Errorf("\n%s", exitErr.Stderr)
+		}
 		fmt.Println("Error:", err)
-		return appList, fmt.Errorf("\n%s", cmd.Stdout)
+		return appList, err
 	}
 
 	err = json.Unmarshal(output, &containerList)
@@ -53,10 +59,10 @@ func (a *App) GetList() ([]App, error) {
 
 func (a *App) ToggleOnOFF(id string, toggle string) error {
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("docker %s %s", toggle, id))
-	_, err := cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return fmt.Errorf("\n%s", cmd.Stdout)
+		return fmt.Errorf("\n%s", output)
 	}
 
 	container := Container{ID: id}
@@ -148,10 +154,13 @@ func (a *App) GetContainer() (*Container, error) {
 	}
 
 	cmd := exec.Command("sh", "-c", "docker inspect $(docker compose ps -q)")
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return nil, fmt.Errorf("\n%s", cmd.Stdout)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("\n%s", exitErr.Stderr)
+		}
+		return nil, err
 	}
 
 	var containerList []Container
@@ -212,10 +221,13 @@ func (a *App) GetApp() error {
 	}
 
 	cmd := exec.Command("sh", "-c", command)
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return fmt.Errorf("\n%s", cmd.Stdout)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("\n%s", exitErr.Stderr)
+		}
+		return err
 	}
 	var containerList []Container
 

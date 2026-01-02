@@ -64,10 +64,13 @@ func (c *Container) Translate() App {
 
 func (a *Container) GetApp() (*App, error) {
 	cmd := exec.Command("sh", "-c", fmt.Sprintf("docker inspect %s", a.ID))
-	output, err := cmd.CombinedOutput()
+	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println("Error:", err)
-		return nil, fmt.Errorf("\n%s", cmd.Stdout)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("\n%s", exitErr.Stderr)
+		}
+		return nil, err
 	}
 	var containerList []Container
 
