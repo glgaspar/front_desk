@@ -78,32 +78,6 @@ func (p *Pihole) Auth() error {
 	return nil
 }
 
-
-func (p *Pihole) CheckForPihole() error {
-	conn, err := connection.Db()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	query := `
-	select enabled
-	from adm.integrations_available
-	where name = 'pihole'
-	`
-
-	rows, err := conn.Query(query)
-	if err != nil {
-		return err
-	}
-
-	for rows.Next() {
-		rows.Scan(&p.Enabled)
-	}
-
-	return nil
-}
-
 func (p *Pihole) GetHistory() (HistoryWrapper, error) {
 	p.Auth()
 	var historyWrapper HistoryWrapper

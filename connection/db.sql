@@ -11,12 +11,10 @@ CREATE TABLE IF NOT EXISTS adm.users (
 CREATE TABLE IF NOT EXISTS adm.activesessions (
 	userid int4 NOT NULL,
 	token varchar(255) NOT NULL,
-    expire timestamp not null,
-	CONSTRAINT activesessions_pkey PRIMARY KEY (token)
+	expire timestamp NOT NULL,
+	CONSTRAINT activesessions_pkey PRIMARY KEY (token),
+	CONSTRAINT activesessions_userid_fkey FOREIGN KEY (userid) REFERENCES adm.users(id) ON DELETE CASCADE
 );
-alter table adm.activesessions
-drop constraint if exists activesessions_userid_fkey;
-ALTER TABLE adm.activesessions ADD CONSTRAINT  activesessions_userid_fkey FOREIGN KEY (userid) REFERENCES adm.users(id) ON DELETE CASCADE;
 
 CREATE TABLE IF NOT EXISTS adm.cloudflare (
     config_id int4 NOT NULL DEFAULT 1,
@@ -43,5 +41,6 @@ CREATE TABLE IF NOT EXISTS adm.integrations_available (
     CONSTRAINT integrations_available_pkey PRIMARY KEY (name)
 );
 INSERT INTO adm.integrations_available (name, enabled) 
-VALUES ('cloudflare', false) ON CONFLICT (name) DO NOTHING,
-('pihole', false) ON CONFLICT (name) DO NOTHING;
+VALUES ('cloudflare', false) ON CONFLICT (name) DO NOTHING;
+INSERT INTO adm.integrations_available (name, enabled) 
+VALUES ('pihole', false) ON CONFLICT (name) DO NOTHING;

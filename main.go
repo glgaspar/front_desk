@@ -8,6 +8,7 @@ import (
 
 	"github.com/glgaspar/front_desk/controller"
 	"github.com/glgaspar/front_desk/features"
+	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -83,14 +84,14 @@ func main() {
 	log.Printf("%sOK%s", greenBg, reset)
 
 	log.Println("checking for cloudflare... ")
-	if err := features.CheckForCloudflare(); err != nil {
+	if err := integrations.CheckFor("cloudflare"); err != nil {
 		log.Printf("%sFAILED%s: %v", redBg, reset, err)
 		panic(err)
 	}
 	log.Printf("%sOK%s", greenBg, reset)
 
 	log.Println("checking for pihole... ")
-	if err := features.CheckForPihole(); err != nil {
+	if err := integrations.CheckFor("pihole"); err != nil {
 		log.Printf("%sFAILED%s: %v", redBg, reset, err)
 		panic(err)
 	}
