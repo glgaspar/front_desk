@@ -68,11 +68,31 @@ func CheckFor(integration string) (bool, error) {
 }
 
 func CheckAll() error {
+	conn, err := connection.Db()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	query := `
+	select name
+	from adm.integrations;
+	`
+
+	rows, err := conn.Query(query)
+	if err != nil {
+		return err
+	}
+
+	var integrations []string
+	for rows.Next() {
+		var integration string
+		rows.Scan(&integration)
+		integrations = append(integrations, integration)
+	}
+
 	redBg := "\033[41m"
 	greenBg := "\033[42m"
 	reset := "\033[0m"
-
-	integrations := []string{"cloudflare", "pihole"}
 
 	for _, integration := range integrations {
 		log.Println("checking for " + integration + "... ")
