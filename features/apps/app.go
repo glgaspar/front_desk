@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/glgaspar/front_desk/features/cloudflare"
+	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
 )
 
 type App struct {

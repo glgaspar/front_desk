@@ -3,7 +3,6 @@ package cloudflare
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/glgaspar/front_desk/connection"
 )
@@ -32,6 +31,7 @@ type Config struct {
 	CloudflareAPIToken string `json:"cloudflareAPIToken" db:"cloudflareAPIToken"`
 	LocalAddress       string `json:"localAddress" db:"localAddress"`
 	ZoneId             string `json:"zoneId" db:"zoneId"`
+	Enabled            bool   `json:"enabled" db:"enabled"`
 }
 
 func (c *Config) SetCloudflare() error {
@@ -41,12 +41,6 @@ func (c *Config) SetCloudflare() error {
 	}
 	defer conn.Close()
 
-	os.Setenv("CLOUDFLARE_ACCOUNT_ID", c.AccountId)
-	os.Setenv("CLOUDFLARE_TUNNEL_ID", c.TunnelId)
-	os.Setenv("CLOUDFLARE_API_TOKEN", c.CloudflareAPIToken)
-	os.Setenv("CLOUDFLARE_LOCAL_ADDRESS", c.LocalAddress)
-	os.Setenv("CLOUDFLARE_ZONE_ID", c.ZoneId)
-	
 	tran, err := conn.Begin()
 	if err != nil {
 		return err
@@ -70,13 +64,41 @@ func (c *Config) SetCloudflare() error {
 		tran.Rollback()
 		return err 
 	}
-
-	os.Setenv("CLOUDFLARE", "TRUE")
 	
 	return tran.Commit()
 }
 
 func (c *Config) CheckForCloudflare() error {
+	conn, err := connection.Db()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	query := `
+	select enabled
+	from adm.integrations_available
+	where name = 'cloudflare'
+	`
+
+	rows, err := conn.Query(query)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		rows.Scan(&c.Enabled)
+	}
+
+	return nil
+}
+
+func (c *Config) CreateTunnel(hostname string, localPort string) error {
+	var localAddress string
+	var token string
+	var accountId string
+	var tunnelId string
+	var zoneId string
 	conn, err := connection.Db()
 	if err != nil {
 		return err
@@ -93,31 +115,10 @@ func (c *Config) CheckForCloudflare() error {
 		return err
 	}
 
+
 	for rows.Next() {
-		rows.Scan(&c.AccountId, &c.TunnelId, &c.CloudflareAPIToken, &c.LocalAddress, &c.ZoneId)
+		rows.Scan(&accountId, &tunnelId, &token, &localAddress, &zoneId)
 	}
-
-	if c.AccountId != "" && c.TunnelId != "" && c.CloudflareAPIToken != "" && c.LocalAddress != "" {
-		os.Setenv("CLOUDFLARE", "TRUE")
-		os.Setenv("CLOUDFLARE_ACCOUNT_ID", c.AccountId)
-		os.Setenv("CLOUDFLARE_TUNNEL_ID", c.TunnelId)
-		os.Setenv("CLOUDFLARE_API_TOKEN", c.CloudflareAPIToken)
-		os.Setenv("CLOUDFLARE_LOCAL_ADDRESS", c.LocalAddress)
-		os.Setenv("CLOUDFLARE_ZONE_ID", c.ZoneId)
-	}
-	return nil
-}
-
-func (c *Config) CreateTunnel(hostname string, localPort string) error {
-	if os.Getenv("CLOUDFLARE") != "TRUE" {
-		return fmt.Errorf("cloudflare is not set up")
-	}
-
-	localAddress := os.Getenv("CLOUDFLARE_LOCAL_ADDRESS")
-	token := os.Getenv("CLOUDFLARE_API_TOKEN")
-	accountId := os.Getenv("CLOUDFLARE_ACCOUNT_ID")
-	tunnelId := os.Getenv("CLOUDFLARE_TUNNEL_ID")
-	zoneId := os.Getenv("CLOUDFLARE_ZONE_ID")
 
 	for _, val := range []struct {
 		name, val string

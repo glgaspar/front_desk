@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/glgaspar/front_desk/controller"
+	"github.com/glgaspar/front_desk/features"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -68,21 +69,28 @@ func main() {
 	reset := "\033[0m"
 
 	log.Println("checking database tables... ")
-	if err := controller.CreateDatabase(); err != nil {
+	if err := features.CreateDatabase(); err != nil {
 		log.Printf("%sFAILED%s: %v", redBg, reset, err)
 		panic(err)
 	}
 	log.Printf("%sOK%s", greenBg, reset)
 
 	log.Println("checking for users... ")
-	if err := controller.CheckForUsers(); err != nil {
+	if err := features.CheckForUsers(); err != nil {
 		log.Printf("%sFAILED%s: %v", redBg, reset, err)
 		panic(err)
 	}
 	log.Printf("%sOK%s", greenBg, reset)
 
 	log.Println("checking for cloudflare... ")
-	if err := controller.CheckForCloudflare(); err != nil {
+	if err := features.CheckForCloudflare(); err != nil {
+		log.Printf("%sFAILED%s: %v", redBg, reset, err)
+		panic(err)
+	}
+	log.Printf("%sOK%s", greenBg, reset)
+
+	log.Println("checking for pihole... ")
+	if err := features.CheckForPihole(); err != nil {
 		log.Printf("%sFAILED%s: %v", redBg, reset, err)
 		panic(err)
 	}

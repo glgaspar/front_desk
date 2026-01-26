@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 
 	"github.com/glgaspar/front_desk/features/apps"
-	"github.com/glgaspar/front_desk/features/cloudflare"
 	"github.com/glgaspar/front_desk/features/login"
 	"github.com/glgaspar/front_desk/features/system"
+	"github.com/glgaspar/front_desk/features/integrations"
+	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
+	"github.com/glgaspar/front_desk/features/integrations/pihole"
 	"github.com/labstack/echo/v4"
 )
 
@@ -19,14 +19,6 @@ type Response struct {
 	Status  bool        `json:"status"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
-}
-
-func CreateDatabase() error {
-	return login.CreateDatabase()
-}
-
-func CheckForUsers() error {
-	return new(login.LoginUser).CheckForUsers()
 }
 
 func Signup(c echo.Context) error {
@@ -232,45 +224,6 @@ func RemoveContainer(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
 }
 
-func SetCloudflare(c echo.Context) error {
-	var data cloudflare.Config
-	body, err := io.ReadAll(c.Request().Body)
-	if err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-	defer c.Request().Body.Close()
-
-	if err := json.Unmarshal(body, &data); err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-
-	err = data.SetCloudflare()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
-	}
-
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
-}
-
-func GetCloudflare(c echo.Context) error {
-	data := false
-	set := os.Getenv("CLOUDFLARE")
-	if set == "TRUE" {
-		data = true
-	}
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: data})
-}
-
-func CheckForCloudflare() error {
-	data := new(cloudflare.Config)
-	if os.Getenv("CLOUDFLARE")=="TRUE" {
-		log.Println("cloudflare available")
-	} else {
-		log.Println("cloudflare not available")
-	}
-	return data.CheckForCloudflare()
-}
-
 func GetLogs(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
@@ -313,3 +266,35 @@ func GetLogs(c echo.Context) error {
 
 	return nil
 }
+
+func SetCloudflare(c echo.Context) error {
+	var data cloudflare.Config
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = data.SetCloudflare()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	err = integrations.SetAvailable("cloudflare")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}
+
+func GetCloudflare(c echo.Context) error {
+	data := new(cloudflare.Config)
+	data.CheckForCloudflare()
+
+	return c.JSON(http.StatusOK, Response{Status: data.Enabled, Message: "Operation successful", Data: data})
+}
+
