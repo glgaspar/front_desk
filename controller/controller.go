@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/glgaspar/front_desk/features/apps"
-	"github.com/glgaspar/front_desk/features/login"
-	"github.com/glgaspar/front_desk/features/system"
 	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
 	"github.com/glgaspar/front_desk/features/integrations/pihole"
+	"github.com/glgaspar/front_desk/features/integrations/transmission"
+	"github.com/glgaspar/front_desk/features/login"
+	"github.com/glgaspar/front_desk/features/system"
 	"github.com/labstack/echo/v4"
 )
 
@@ -332,4 +334,78 @@ func GetPihole(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: enabled, Message: "Operation successful"})
+}
+
+func PiholeHistory(c echo.Context) error {
+	pihole := pihole.Pihole{}
+	history, err := pihole.GetHistory()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: history})
+}
+
+func SetTransmission(c echo.Context) error {
+	t := transmission.Config{}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &t); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = t.SetTransmission()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	err = integrations.SetAvailable("transmission")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}
+
+func GetTransmission(c echo.Context) error {
+	enabled, err := integrations.CheckFor("transmission")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: enabled, Message: "Operation successful"})
+}
+
+func GetTransmissionTorrents(c echo.Context) error {
+	t := transmission.Transmission{}
+	torrents, err := t.GetAllTorrents()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: torrents})
+}
+
+func TransmissionToggleTorrent(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	action := c.Param("action")
+	if action != "start" && action != "stop" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Both Id (int64) and action (\"start\", \"stop\") must be sent"})
+	}
+
+	t := transmission.Transmission{}
+	err = t.ToggleTorrent(id, action)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
 }

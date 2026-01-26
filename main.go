@@ -128,6 +128,13 @@ func main() {
 
 	e.POST("/config/pihole", controller.SetPihole)
 	e.GET("/config/pihole", controller.GetPihole)
+	e.GET("/pihole/history", controller.PiholeHistory)
+
+	e.POST("/config/transmission", controller.SetTransmission)
+	e.GET("/config/transmission", controller.GetTransmission)
+	e.POST("/transmission/toggle/:id/:action", controller.TransmissionToggleTorrent)
+	e.GET("/transmission/torrents", controller.GetTransmissionTorrents)
+
 
 
 	e.Logger.Fatal(e.Start(":8080"))

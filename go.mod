@@ -11,9 +11,15 @@ require (
 )
 
 require (
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hekmon/cunits/v2 v2.1.0 // indirect
+)
+
+require (
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/hekmon/transmissionrpc/v3 v3.0.0
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

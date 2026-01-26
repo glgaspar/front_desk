@@ -44,3 +44,5 @@ INSERT INTO adm.integrations_available (name, enabled)
 VALUES ('cloudflare', false) ON CONFLICT (name) DO NOTHING;
 INSERT INTO adm.integrations_available (name, enabled) 
 VALUES ('pihole', false) ON CONFLICT (name) DO NOTHING;
+INSERT INTO adm.integrations_available (name, enabled) 
+VALUES ('transmission', false) ON CONFLICT (name) DO NOTHING;
