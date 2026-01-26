@@ -75,7 +75,7 @@ func CheckAll() error {
 	defer conn.Close()
 	query := `
 	select name
-	from adm.integrations;
+	from adm.integrations_available;
 	`
 
 	rows, err := conn.Query(query)
