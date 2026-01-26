@@ -298,3 +298,36 @@ func GetCloudflare(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: data.Enabled, Message: "Operation successful", Data: data})
 }
 
+func SetPihole(c echo.Context) error {
+	var data pihole.Config
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = data.SetPihole()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	err = integrations.SetAvailable("pihole")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}
+
+func GetPihole(c echo.Context) error {
+	var pihole = pihole.Pihole{}
+	err := pihole.CheckForPihole()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, Response{Status: pihole.Enabled, Message: "Operation successful"})
+}

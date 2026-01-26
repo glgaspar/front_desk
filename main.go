@@ -134,6 +134,9 @@ func main() {
 	e.POST("/config/cloudflare", controller.SetCloudflare)
 	e.GET("/config/cloudflare", controller.GetCloudflare)
 
+	e.POST("/config/pihole", controller.SetPihole)
+	e.GET("/config/pihole", controller.GetPihole)
+
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
