@@ -83,19 +83,10 @@ func main() {
 	}
 	log.Printf("%sOK%s", greenBg, reset)
 
-	log.Println("checking for cloudflare... ")
-	if err := integrations.CheckFor("cloudflare"); err != nil {
-		log.Printf("%sFAILED%s: %v", redBg, reset, err)
+	log.Println("checking integrations... ")
+	if err := integrations.CheckAll(); err != nil {
 		panic(err)
 	}
-	log.Printf("%sOK%s", greenBg, reset)
-
-	log.Println("checking for pihole... ")
-	if err := integrations.CheckFor("pihole"); err != nil {
-		log.Printf("%sFAILED%s: %v", redBg, reset, err)
-		panic(err)
-	}
-	log.Printf("%sOK%s", greenBg, reset)
 
 	log.Printf("%sall checks done%s", greenBg, reset)
 	log.Println("starting server")

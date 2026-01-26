@@ -41,11 +41,11 @@ func SetUnavailable(name string) error {
 	return nil
 }
 
-func CheckFor(integration string) error {
+func CheckFor(integration string) (bool, error) {
 	enabled := false
 	conn, err := connection.Db()
 	if err != nil {
-		return err
+		return enabled, err
 	}
 	defer conn.Close()
 
@@ -57,17 +57,39 @@ func CheckFor(integration string) error {
 
 	rows, err := conn.Query(query, integration)
 	if err != nil {
-		return err
+		return enabled, err
 	}
 
 	for rows.Next() {
 		rows.Scan(&enabled)
 	}
 
-	if enabled {
-		log.Println(integration + " available")
-	} else {
-		log.Println(integration + " not available")
+	return enabled, nil
+}
+
+func CheckAll() error {
+	redBg := "\033[41m"
+	greenBg := "\033[42m"
+	reset := "\033[0m"
+
+	integrations := []string{"cloudflare", "pihole"}
+
+	for _, integration := range integrations {
+		log.Println("checking for " + integration + "... ")
+		
+		enabled, err := CheckFor(integration)
+		if err != nil {
+			log.Printf("%sFAILED%s: %v", redBg, reset, err)
+			return err
+		}
+
+		if enabled {
+			log.Println(integration + " available")
+		} else {
+			log.Println(integration + " not available")
+		}
+		
+		log.Printf("%sOK%s", greenBg, reset)
 	}
 	return nil
 }

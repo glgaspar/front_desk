@@ -292,10 +292,12 @@ func SetCloudflare(c echo.Context) error {
 }
 
 func GetCloudflare(c echo.Context) error {
-	data := new(cloudflare.Config)
-	data.CheckForCloudflare()
+	enabled, err := integrations.CheckFor("cloudflare")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
 
-	return c.JSON(http.StatusOK, Response{Status: data.Enabled, Message: "Operation successful", Data: data})
+	return c.JSON(http.StatusOK, Response{Status: enabled, Message: "Operation successful"})
 }
 
 func SetPihole(c echo.Context) error {
@@ -324,10 +326,10 @@ func SetPihole(c echo.Context) error {
 }
 
 func GetPihole(c echo.Context) error {
-	var pihole = pihole.Pihole{}
-	err := pihole.CheckForPihole()
+	enabled, err := integrations.CheckFor("pihole")
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
-	return c.JSON(http.StatusOK, Response{Status: pihole.Enabled, Message: "Operation successful"})
+
+	return c.JSON(http.StatusOK, Response{Status: enabled, Message: "Operation successful"})
 }
