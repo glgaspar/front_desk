@@ -1,8 +1,9 @@
 package integrations
 
 import (
-	"github.com/glgaspar/front_desk/connection"
 	"log"
+
+	"github.com/glgaspar/front_desk/connection"
 )
 
 func SetAvailable(name string) error {
@@ -12,7 +13,7 @@ func SetAvailable(name string) error {
 	}
 	defer conn.Close()
 	query := `
-	update adm.integrations
+	update frontdesk.integrations
 	set available = TRUE
 	where name = $1
 	`
@@ -30,7 +31,7 @@ func SetUnavailable(name string) error {
 	}
 	defer conn.Close()
 	query := `
-	update adm.integrations
+	update frontdesk.integrations
 	set available = FALSE
 	where name = $1
 	`
@@ -51,7 +52,7 @@ func CheckFor(integration string) (bool, error) {
 
 	query := `
 	select enabled
-	from adm.integrations_available
+	from frontdesk.integrations_available
 	where name = $1;
 	`
 
@@ -75,7 +76,7 @@ func CheckAll() error {
 	defer conn.Close()
 	query := `
 	select name
-	from adm.integrations_available;
+	from frontdesk.integrations_available;
 	`
 
 	rows, err := conn.Query(query)
@@ -96,7 +97,7 @@ func CheckAll() error {
 
 	for _, integration := range integrations {
 		log.Println("checking for " + integration + "... ")
-		
+
 		enabled, err := CheckFor(integration)
 		if err != nil {
 			log.Printf("%sFAILED%s: %v", redBg, reset, err)
@@ -108,7 +109,7 @@ func CheckAll() error {
 		} else {
 			log.Println(integration + " not available")
 		}
-		
+
 		log.Printf("%sOK%s", greenBg, reset)
 	}
 	return nil

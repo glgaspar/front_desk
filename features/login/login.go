@@ -26,7 +26,7 @@ func CreateDatabase() error {
 		return err
 	}
 
-	queries = append(queries, strings.Split(string(file), ";")...)
+	queries = append(queries, strings.Split(string(file), "----")...)
 
 	tx, err := conn.Begin()
 	if err != nil {
@@ -59,7 +59,7 @@ func LoginValidator(cookie string) (bool, error) {
 		when count(userId) = 0 then false
 		else true 
 	end,false) 
-	from adm.activesessions
+	from frontdesk.activesessions
 	where token = $1 and expire >= now() `
 	res, err := conn.Query(query, cookie)
 	if err != nil {
@@ -82,13 +82,13 @@ func RefreshCookie(cookie *http.Cookie) (*http.Cookie, error) {
 	defer conn.Close()
 
 	query := `
-	update adm.activesessions
+	update frontdesk.activesessions
 		token $1,
 		expire = $2
 	where
 		token = $1
 	RETURNING token, expire`
-	
+
 	res, err := conn.Query(query, (*cookie).Value, (*cookie).Expires)
 	if err != nil {
 		return cookie, err
@@ -117,9 +117,9 @@ type SessionCookie struct {
 
 func (u *LoginUser) Login() (*SessionCookie, error) {
 	session := SessionCookie{
-		Name: "front_desk_awesome_cookie",
-		Value: uuid.New().String(),
-		Domain: os.Getenv("DOMAIN_NAME"),
+		Name:    "front_desk_awesome_cookie",
+		Value:   uuid.New().String(),
+		Domain:  os.Getenv("DOMAIN_NAME"),
 		Expires: time.Now().Add(time.Hour * 24),
 	}
 
@@ -139,7 +139,7 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 
 	query := `
 	select id
-	from adm.users
+	from frontdesk.users
 	where
 		username = $1
 		and password = $2 `
@@ -163,11 +163,11 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 	}
 
 	sessionClearQuery := `
-	delete from adm.activesessions
+	delete from frontdesk.activesessions
 	where userid = $1 and expire < now()
 	`
 	sessionCreateQuery := `
-	insert into adm.activesessions
+	insert into frontdesk.activesessions
 	(userid, token, expire)
 	values ($1,$2,$3)
 	`
@@ -214,10 +214,10 @@ func (u *LoginUser) Create() (LoginUser, error) {
 	defer conn.Close()
 
 	query := `
-	insert into adm.users (username, password)
+	insert into frontdesk.users (username, password)
 	values ($1,$2)
 	RETURNING id, username`
-	
+
 	res, err := conn.Query(query, u.UserName, hashPass.Sum32())
 	if err != nil {
 		return *u, err
@@ -247,7 +247,7 @@ func (u *LoginUser) CheckForUsers() error {
 	var count int
 	query := `
 	select count(id)
-	from adm.users `
+	from frontdesk.users `
 	res, err := conn.Query(query)
 	if err != nil {
 		return err
@@ -282,7 +282,7 @@ func (u *LoginUser) Logout(cookie *http.Cookie) error {
 	defer conn.Close()
 
 	sessionClearQuery := `
-	delete from adm.activesessions
+	delete from frontdesk.activesessions
 	where token = $1
 	`
 	_, err = conn.Exec(sessionClearQuery, cookie.Value)

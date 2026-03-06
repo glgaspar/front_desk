@@ -8,8 +8,8 @@ import (
 )
 
 type ingressRule struct {
-	Hostname *string `json:"hostname,omitempty"`
-	Service  string  `json:"service"`
+	Hostname      *string                `json:"hostname,omitempty"`
+	Service       string                 `json:"service"`
 	OriginRequest map[string]interface{} `json:"originRequest,omitempty"`
 }
 
@@ -20,8 +20,8 @@ type tunnelConfigBody struct {
 }
 
 type tunnelConfigResponse struct {
-	Success bool               `json:"success"`
-	Errors  []interface{}      `json:"errors"`
+	Success bool             `json:"success"`
+	Errors  []interface{}    `json:"errors"`
 	Result  tunnelConfigBody `json:"result"`
 }
 
@@ -47,24 +47,24 @@ func (c *Config) SetCloudflare() error {
 	}
 
 	query := `
-	delete from adm.cloudflare;
+	delete from frontdesk.cloudflare;
 	`
 	_, err = tran.Exec(query)
 	if err != nil {
 		tran.Rollback()
-		return err 
+		return err
 	}
 
 	query = `
-	insert into adm.cloudflare (accountId, tunnelId, cloudflareAPIToken, localAddress, zoneId)
+	insert into frontdesk.cloudflare (accountId, tunnelId, cloudflareAPIToken, localAddress, zoneId)
 	values($1,$2,$3,$4,$5);
 	`
 	_, err = tran.Exec(query, c.AccountId, c.TunnelId, c.CloudflareAPIToken, c.LocalAddress, c.ZoneId)
 	if err != nil {
 		tran.Rollback()
-		return err 
+		return err
 	}
-	
+
 	return tran.Commit()
 }
 
@@ -77,7 +77,7 @@ func (c *Config) CheckForCloudflare() error {
 
 	query := `
 	select enabled
-	from adm.integrations_available
+	from frontdesk.integrations_available
 	where name = 'cloudflare'
 	`
 
@@ -107,14 +107,13 @@ func (c *Config) CreateTunnel(hostname string, localPort string) error {
 
 	query := `
 	select accountId, tunnelId, cloudflareAPIToken, localAddress, zoneId
-	from adm.cloudflare
+	from frontdesk.cloudflare
 	`
 
 	rows, err := conn.Query(query)
 	if err != nil {
 		return err
 	}
-
 
 	for rows.Next() {
 		rows.Scan(&accountId, &tunnelId, &token, &localAddress, &zoneId)

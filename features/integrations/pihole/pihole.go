@@ -17,23 +17,23 @@ func (c *Config) SetPihole() error {
 		return err
 	}
 	defer conn.Close()
-	
+
 	tran, err := conn.Begin()
 	if err != nil {
 		return err
 	}
-	
+
 	query := `
-	delete from adm.pihole;
+	delete from frontdesk.pihole;
 	`
 	_, err = tran.Exec(query)
 	if err != nil {
 		tran.Rollback()
 		return err
 	}
-	
+
 	query = `
-	insert into adm.pihole (password, url)
+	insert into frontdesk.pihole (password, url)
 	values ($1, $2);
 	`
 	_, err = tran.Exec(query, c.Password, c.Url)
@@ -41,7 +41,7 @@ func (c *Config) SetPihole() error {
 		tran.Rollback()
 		return err
 	}
-	
+
 	return tran.Commit()
 }
 
@@ -63,7 +63,7 @@ func (p *Pihole) Auth() error {
 
 	query := `
 	select password, url
-	from adm.pihole
+	from frontdesk.pihole
 	`
 
 	rows, err := conn.Query(query)
@@ -85,8 +85,8 @@ func (p *Pihole) GetHistory() (HistoryWrapper, error) {
 	headers := map[string]string{
 		"Authorization": "Bearer " + p.Token,
 	}
-	
-	res, err:= connection.Api("GET", p.Url+"", headers, nil)
+
+	res, err := connection.Api("GET", p.Url+"", headers, nil)
 	if err != nil {
 		return historyWrapper, err
 	}

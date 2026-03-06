@@ -29,7 +29,7 @@ func (c *Config) SetTransmission() error {
 	}
 
 	query := `
-	delete from adm.transmission;
+	delete from frontdesk.transmission;
 	`
 	_, err = tran.Exec(query)
 	if err != nil {
@@ -38,7 +38,7 @@ func (c *Config) SetTransmission() error {
 	}
 
 	query = `
-	insert into adm.transmission (url, username, password, port)
+	insert into frontdesk.transmission (url, username, password, port)
 	values ($1, $2, $3, $4);
 	`
 	_, err = tran.Exec(query, c.Url, c.Username, c.Password, c.Port)
@@ -64,7 +64,7 @@ func (t *Transmission) Connect() error {
 
 	query := `
 	select url, username, password, port
-	from adm.transmission
+	from frontdesk.transmission
 	limit 1;
 	`
 
@@ -131,7 +131,7 @@ func (t *Transmission) ToggleTorrent(id int64, action string) error {
 	}
 
 	ids := []int64{id}
-	
+
 	switch action {
 		case "start":
 			err = t.Client.TorrentStartIDs(context.TODO(), ids)
