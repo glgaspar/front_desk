@@ -64,6 +64,13 @@ func main() {
 	if err != nil {
 		log.Printf("error reading .env %s", err.Error())
 	}
+	
+	origins := os.Getenv("FRONT_END_URL")
+	credentials := true
+	enviroment := os.Getenv("ENVIROMENT")
+	if enviroment == "DEV" {credentials = false}
+	
+	log.Printf("Starting Front Desk in %s environment", enviroment)
 
 	redBg := "\033[41m"
 	greenBg := "\033[42m"
@@ -93,13 +100,17 @@ func main() {
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{os.Getenv("FRONT_END_URL")},
+		AllowOrigins: []string{origins},
+		AllowCredentials: credentials,
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
-		AllowCredentials: true,
 	}))
+
     e.Use(middleware.Logger())
-	e.Use(authentication)
+	
+	if enviroment != "DEV" {
+		e.Use(authentication)
+	}
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") 
