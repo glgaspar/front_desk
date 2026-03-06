@@ -6,12 +6,14 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/glgaspar/front_desk/features/apps"
 	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
 	"github.com/glgaspar/front_desk/features/integrations/pihole"
 	"github.com/glgaspar/front_desk/features/integrations/transmission"
+	"github.com/glgaspar/front_desk/features/integrations/widgets"
 	"github.com/glgaspar/front_desk/features/login"
 	"github.com/glgaspar/front_desk/features/system"
 	"github.com/labstack/echo/v4"
@@ -408,4 +410,65 @@ func TransmissionToggleTorrent(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}
+
+func GetWidgets(c echo.Context) error {
+	homeOnly := c.Param("homeOnly")
+	if homeOnly != "true" && homeOnly != "false" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "homeOnly parameter must be \"true\" or \"false\""})
+	}
+
+	homeBool := homeOnly == "true"
+
+	var widget = new(widgets.Widget)
+	widgetList, err := widget.GetList(homeBool)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d Widgets found", len(widgetList)), Data: widgetList})
+}
+
+func CreateWidget(c echo.Context) error {
+	var data widgets.Widget
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = data.CreateWidget()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Widget created successfully", Data: data})
+}
+
+func ToggleWidget(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
+	}
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	toggle := strings.ToLower(c.Param("toggle"))
+	if toggle != "enabled" && toggle != "selected" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Toggle must be \"enabled\" or \"selected\""})
+	}
+
+	widget := widgets.Widget{Id: idInt}
+	err = widget.Toggle(toggle)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: widget})
 }

@@ -47,3 +47,28 @@ VALUES ('pihole', false) ON CONFLICT (name) DO NOTHING;
 ----
 INSERT INTO frontdesk.integrations_available (name, enabled) 
 VALUES ('transmission', false) ON CONFLICT (name) DO NOTHING;
+----
+CREATE TABLE IF NOT EXISTS frontdesk.widgets (
+    id serial4 NOT NULL,
+    name varchar(50) NOT NULL,
+    enabled bool NOT NULL DEFAULT false,
+    position int4 NOT NULL DEFAULT 999,
+    selected bool NOT NULL DEFAULT false,
+    CONSTRAINT widgets_pkey PRIMARY KEY (id)
+);
+----
+CREATE OR REPLACE FUNCTION frontdesk.check_widgets_selected_limit()
+RETURNS TRIGGER AS 
+    $$
+    BEGIN
+        IF (SELECT count(*) FROM frontdesk.widgets where selected = true) >= 5 THEN
+            RAISE EXCEPTION 'Cannot select more than 5 widgets to home';
+        END IF;
+        RETURN NEW;
+    END;
+    $$ 
+    LANGUAGE plpgsql;
+----
+CREATE TRIGGER trigger_check_widgets_selected_limit
+BEFORE INSERT OR UPDATE ON frontdesk.widgets
+FOR EACH ROW EXECUTE FUNCTION frontdesk.check_widgets_selected_limit();

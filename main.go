@@ -123,15 +123,19 @@ func main() {
 
 	e.GET("/system/usage", controller.GetSystemUsage)
 	
-	e.POST("/config/cloudflare", controller.SetCloudflare)
-	e.GET("/config/cloudflare", controller.GetCloudflare)
+	e.POST("/widgets", controller.CreateWidget)
+	e.GET("/widgets/:homeOnly", controller.GetWidgets)
+	e.PUT("/widgets/toggle/:id/:toggle", controller.ToggleWidget)
 
-	e.POST("/config/pihole", controller.SetPihole)
-	e.GET("/config/pihole", controller.GetPihole)
+	e.POST("/cloudflare/config", controller.SetCloudflare)
+	e.GET("/cloudflare/config", controller.GetCloudflare)
+
+	e.POST("/pihole/config", controller.SetPihole)
+	e.GET("/pihole/config", controller.GetPihole)
 	e.GET("/pihole/history", controller.PiholeHistory)
 
-	e.POST("/config/transmission", controller.SetTransmission)
-	e.GET("/config/transmission", controller.GetTransmission)
+	e.POST("/transmission/config", controller.SetTransmission)
+	e.GET("/transmission/config", controller.GetTransmission)
 	e.POST("/transmission/toggle/:id/:action", controller.TransmissionToggleTorrent)
 	e.GET("/transmission/torrents", controller.GetTransmissionTorrents)
 
