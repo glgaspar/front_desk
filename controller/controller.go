@@ -413,9 +413,9 @@ func TransmissionToggleTorrent(c echo.Context) error {
 }
 
 func GetWidgets(c echo.Context) error {
-	homeOnly := c.Param("homeOnly")
-	if homeOnly != "true" && homeOnly != "false" {
-		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "homeOnly parameter must be \"true\" or \"false\""})
+	homeOnly := c.QueryParam("homeOnly")
+	if homeOnly != "true" && homeOnly != "false" && homeOnly != "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "homeOnly parameter must be \"true\" or \"false\" or empty"})
 	}
 
 	homeBool := homeOnly == "true"

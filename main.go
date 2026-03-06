@@ -124,7 +124,7 @@ func main() {
 	e.GET("/system/usage", controller.GetSystemUsage)
 	
 	e.POST("/widgets", controller.CreateWidget)
-	e.GET("/widgets/:homeOnly", controller.GetWidgets)
+	e.GET("/widgets", controller.GetWidgets)
 	e.PUT("/widgets/toggle/:id/:toggle", controller.ToggleWidget)
 
 	e.POST("/cloudflare/config", controller.SetCloudflare)
