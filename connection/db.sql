@@ -69,6 +69,7 @@ RETURNS TRIGGER AS
     $$ 
     LANGUAGE plpgsql;
 ----
+DROP TRIGGER IF EXISTS trigger_check_widgets_selected_limit ON frontdesk.widgets;
 CREATE TRIGGER trigger_check_widgets_selected_limit
 BEFORE INSERT OR UPDATE ON frontdesk.widgets
 FOR EACH ROW EXECUTE FUNCTION frontdesk.check_widgets_selected_limit();
