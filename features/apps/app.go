@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/glgaspar/front_desk/features/utils/messenger"
+
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
 )
 
@@ -75,27 +77,13 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 
 }
 
-func (a *App) CreateApp(compose Compose) error {
-	var dir string
-	reader := strings.NewReader(compose.Compose)
-
-	scanner := bufio.NewScanner(reader)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, "front-desk.dir:") {
-			parts := strings.Split(line, ":")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid front-desk.dir label")
-			}
-			dir = strings.TrimSpace(parts[1])
-			if dir[0] != '/' {
-				dir = "/" + dir
-			}
-		}
+func (a *App) CreateApp(compose Compose, topic string, dir string) error {
+	err := os.Mkdir("/src/apps"+dir, 0777)
+	if err != nil {
+		return err
 	}
 
-	err := os.Mkdir("/src/apps"+dir, 0777)
+	err = messenger.SendMessage(topic, "Directory created.")
 	if err != nil {
 		return err
 	}
@@ -110,11 +98,22 @@ func (a *App) CreateApp(compose Compose) error {
 		fmt.Println("Error writing file:", err)
 		return err
 	}
+
+	err = messenger.SendMessage(topic, "Initializing build.")
+	if err != nil {
+		return err
+	}
+
 	newApp, err := Rebuild(dir)
 	if err != nil {
 		return err
 	}
 	*a = *newApp
+
+	err = messenger.SendMessage(topic, "Build finished.")
+	if err != nil {
+		return err
+	}
 
 	container, err := a.GetContainer()
 	if err != nil {
@@ -122,12 +121,21 @@ func (a *App) CreateApp(compose Compose) error {
 	}
 
 	if (*container).Config.Labels.Port == nil {
-		return fmt.Errorf("App was created but no port provided to for tunnel")
+		return messenger.SendMessage(topic, "App was created but no port provided for tunnel.")
 	}
 
 	if compose.Tunnel != nil && *compose.Tunnel {
+		err = messenger.SendMessage(topic, "Creating Cloudflare tunnel.")
+		if err != nil {
+			return err
+		}
+
 		cloudflareConfig := new(cloudflare.Config)
 		err = cloudflareConfig.CreateTunnel(strings.Replace(a.Url, "https://", "", 1), *container.Config.Labels.Port)
+		if err != nil {
+			return err
+		}
+		err = messenger.SendMessage(topic, "Tunnel Cloudflare created.")
 		if err != nil {
 			return err
 		}

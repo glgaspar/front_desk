@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"github.com/glgaspar/front_desk/features/integrations/widgets"
 	"github.com/glgaspar/front_desk/features/login"
 	"github.com/glgaspar/front_desk/features/system"
+	"github.com/glgaspar/front_desk/features/utils/messenger"
 	"github.com/labstack/echo/v4"
 )
 
@@ -204,13 +206,50 @@ func CreateApp(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
 
-	app := apps.App{}
-	err = app.CreateApp(data)
+	var dir string
+	var topic string
+
+	reader := strings.NewReader(data.Compose)
+
+	scanner := bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "front-desk.dir:") {
+			parts := strings.Split(line, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid front-desk.dir label")
+			}
+			dir = strings.TrimSpace(parts[1])
+			if dir[0] != '/' {
+				dir = "/" + dir
+			}
+		}
+		if strings.Contains(line, "front-desk.name:") {
+			parts := strings.Split(line, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid front-desk.name label")
+			}
+			topic = strings.TrimSpace(parts[1])
+		}
+	}
+
+	err = messenger.CreateTopic(topic)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: app})
+	app := apps.App{}
+	go func() {
+		defer messenger.DeleteTopic(topic)
+		err = app.CreateApp(data, topic, dir)
+		if err != nil {
+			messenger.SendMessage(topic, err.Error())
+		}
+
+	}()
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: struct{Topic string `json:"topic"`}{Topic: topic}})
 }
 
 func RemoveContainer(c echo.Context) error {
@@ -388,7 +427,7 @@ func GetTransmissionTorrents(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
-	
+
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: torrents})
 }
 
