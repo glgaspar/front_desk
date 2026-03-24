@@ -1,28 +1,31 @@
 package messenger
 
 import (
-	"context"
 	"net"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/segmentio/kafka-go"
 )
 
+
+func connect(topic string) (*kafka.Conn, error){
+    var host string = os.Getenv("KAFKA_IP")
+    var port string = os.Getenv("KAFKA_PORT")
+    var controllerConn *kafka.Conn
+    var err error
+
+    netConn, err := net.Dial("tcp", net.JoinHostPort(host, port))
+    if err != nil {
+        return controllerConn, err
+    }
+
+    controllerConn = kafka.NewConnWith(netConn, kafka.ConnConfig{Topic: topic})
+    
+    return controllerConn, err
+}
+
 func CreateTopic(topic string) error {
-    // Basic conceptual flow
-    conn, err := kafka.Dial("tcp", os.Getenv("KAFKA_IP"))
-    if err != nil {
-        return err
-    }
-
-    controller, err := conn.Controller()
-    if err != nil {
-        return err
-    }
-
-    controllerConn, err := kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+    controllerConn, err := connect("")
     if err != nil {
         return err
     }
@@ -32,17 +35,8 @@ func CreateTopic(topic string) error {
 
 func DeleteTopic(topic string) error {
     SendMessage(topic, "End of events. Deleting topic.")
-    conn, err := kafka.Dial("tcp", os.Getenv("KAFKA_IP"))
-    if err != nil {
-        return err
-    }
-
-    controller, err := conn.Controller()
-    if err != nil {
-        return err
-    }
-
-    controllerConn, err := kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+    
+    controllerConn, err := connect(topic)
     if err != nil {
         return err
     }
@@ -51,22 +45,11 @@ func DeleteTopic(topic string) error {
 }
 
 func SendMessage(topic string, message string) error {
-    conn, err := kafka.DialLeader(context.Background(), "tcp", os.Getenv("KAFKA_IP"), topic, 0)
+    controllerConn, err := connect(topic)
     if err != nil {
         return err
     }
 
-    conn.SetWriteDeadline(time.Now().Add(10*time.Second))
-    _, err = conn.WriteMessages(
-        kafka.Message{Value: []byte(message)},
-    )
-    if err != nil {
-        return err
-    }
-
-    if err := conn.Close(); err != nil {
-        return err
-    }
-
-    return nil
+    _, err = controllerConn.WriteMessages(kafka.Message{Value: []byte(message)})
+    return err
 }
