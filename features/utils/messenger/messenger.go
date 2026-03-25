@@ -7,49 +7,61 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-
-func connect(topic string) (*kafka.Conn, error){
-    var host string = os.Getenv("KAFKA_IP")
-    var port string = os.Getenv("KAFKA_PORT")
-    var controllerConn *kafka.Conn
-    var err error
-
-    netConn, err := net.Dial("tcp", net.JoinHostPort(host, port))
-    if err != nil {
-        return controllerConn, err
-    }
-
-    controllerConn = kafka.NewConnWith(netConn, kafka.ConnConfig{Topic: topic})
-    
-    return controllerConn, err
-}
+var (
+    HOST string = os.Getenv("KAFKA_IP")
+    PORT string = os.Getenv("KAFKA_PORT")
+)
 
 func CreateTopic(topic string) error {
-    controllerConn, err := connect("")
+    controllerConn, err := kafka.Dial("tcp", net.JoinHostPort(HOST, PORT))
     if err != nil {
         return err
     }
+    defer controllerConn.Close()
 
-    return  controllerConn.CreateTopics(kafka.TopicConfig{Topic: topic, NumPartitions: 1, ReplicationFactor: 1})
+
+    topicConfigs := []kafka.TopicConfig{{ Topic: topic, NumPartitions: 1, ReplicationFactor: 1 }}
+
+    return controllerConn.CreateTopics(topicConfigs...)
 }
 
 func DeleteTopic(topic string) error {
-    SendMessage(topic, "End of events. Deleting topic.")
-    
-    controllerConn, err := connect(topic)
+    controllerConn, err := kafka.Dial("tcp", net.JoinHostPort(HOST, PORT))
     if err != nil {
         return err
     }
+    defer controllerConn.Close()
 
     return controllerConn.DeleteTopics(topic)
 }
 
 func SendMessage(topic string, message string) error {
-    controllerConn, err := connect(topic)
+    controllerConn, err := kafka.Dial("tcp", net.JoinHostPort(HOST, PORT))
     if err != nil {
         return err
     }
+    defer controllerConn.Close()
 
     _, err = controllerConn.WriteMessages(kafka.Message{Value: []byte(message)})
     return err
+}
+
+func ListTopics() ([]string, error) {
+    topicLsit := []string{}
+    conn, err := kafka.Dial("tcp", net.JoinHostPort(HOST, PORT))
+    if err != nil {
+        return topicLsit, err
+    }
+    defer conn.Close()
+
+    partitions, err := conn.ReadPartitions()
+    if err != nil {
+        return topicLsit, err
+    }
+
+    for _, p := range partitions {
+        topicLsit = append(topicLsit, p.Topic)
+    }
+
+    return topicLsit, err
 }
