@@ -129,6 +129,15 @@ func GetApps(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d Apps found", len(appList)), Data: appList})
 }
 
+func GetWaitingBuilds(c echo.Context) error {
+	data, err := messenger.ListTopics()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d builds pending builds found"), Data: data})
+}
+
 func AppsToggleOnOFF(c echo.Context) error {
 	id := c.Param("id")
 	toggle := c.Param("toggle")
