@@ -42,7 +42,7 @@ func SendMessage(topic string, message string) error {
     }
     defer controllerConn.Close()
 
-    _, err = controllerConn.WriteMessages(kafka.Message{Value: []byte(message)})
+    _, err = controllerConn.WriteMessages(kafka.Message{Topic: topic,Value: []byte(message)})
     return err
 }
 
