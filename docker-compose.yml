@@ -8,6 +8,8 @@ services:
     tty: true          # Allocate a TTY for terminal (-t)
     ports:
       - 42069:8080
+    env_file:
+      - .env
     healthcheck:
       test: curl --fail http://localhost:8080 || exit 1
       interval: 10m
