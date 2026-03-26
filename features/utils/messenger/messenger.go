@@ -1,6 +1,7 @@
 package messenger
 
 import (
+	"context"
 	"net"
 	"os"
 
@@ -64,4 +65,23 @@ func ListTopics() ([]string, error) {
     }
 
     return topicLsit, err
+}
+
+func Subscribe(topic string, logs *chan string) error {
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:  []string{net.JoinHostPort(HOST, PORT)},
+		Topic:    topic,
+		MaxBytes: 10e6, // 10MB
+	})
+	defer reader.Close()
+
+	for {
+		m, err := reader.ReadMessage(context.TODO())
+		if err != nil {
+			close(*logs)
+			return err
+		}
+		*logs <- string(m.Value)
+	}
+	
 }

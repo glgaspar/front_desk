@@ -126,6 +126,7 @@ func main() {
 
 	e.GET("/apps", controller.GetApps)
 	e.GET("/apps/waitingBuilds", controller.GetWaitingBuilds)
+	e.GET("/apps/waitingBuilds/:app", controller.ListenToBuild)
 	e.PUT("/apps/toggleOnOff/:id/:toggle", controller.AppsToggleOnOFF)
 	e.GET("/apps/compose/:id", controller.GetCompose)
 	e.POST("/apps/compose/:id", controller.SaveCompose)

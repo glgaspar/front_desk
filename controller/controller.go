@@ -138,6 +138,40 @@ func GetWaitingBuilds(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d builds pending builds found"), Data: data})
 }
 
+func ListenToBuild(c echo.Context) error {
+	topic := c.Param("app")
+	logs := make(chan string)
+
+	c.Response().Header().Set("Content-Type", "text/event-stream")
+	c.Response().Header().Set("Cache-Control", "no-cache")
+	c.Response().Header().Set("Connection", "keep-alive")
+	go func(c *echo.Context, logs *chan string) {
+		for {
+			select {
+			case line, ok := <-*logs:
+				if !ok {
+					(*c).Response().Write([]byte("data: [connection closed]\n\n"))
+					(*c).Response().Flush()
+					return
+				}
+				fmt.Fprintf((*c).Response(), "data: %s\n\n", line)
+				(*c).Response().Flush()
+			case <-(*c).Request().Context().Done():
+				return
+			}
+		}
+	}(&c, &logs)
+
+	err := messenger.Subscribe(topic, &logs)
+	if err != nil {
+		c.Response().Write([]byte(err.Error()))
+		c.Response().Flush()
+		return err
+	}
+
+	return nil
+}
+
 func AppsToggleOnOFF(c echo.Context) error {
 	id := c.Param("id")
 	toggle := c.Param("toggle")
