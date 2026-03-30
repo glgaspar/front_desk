@@ -111,6 +111,7 @@ func Logout(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Logout successful"})
 }
+
 func RefreshCookie(c *http.Cookie) (*http.Cookie, error) {
 	valid, err := login.RefreshCookie(c)
 	if err != nil {
@@ -145,31 +146,31 @@ func ListenToBuild(c echo.Context) error {
 	c.Response().Header().Set("Content-Type", "text/event-stream")
 	c.Response().Header().Set("Cache-Control", "no-cache")
 	c.Response().Header().Set("Connection", "keep-alive")
-	go func(c *echo.Context, logs *chan string) {
-		for {
-			select {
-			case line, ok := <-*logs:
-				if !ok {
-					(*c).Response().Write([]byte("data: [connection closed]\n\n"))
-					(*c).Response().Flush()
-					return
-				}
-				fmt.Fprintf((*c).Response(), "data: %s\n\n", line)
-				(*c).Response().Flush()
-			case <-(*c).Request().Context().Done():
-				return
-			}
+
+	ctx := c.Request().Context()
+
+	go func() {
+		defer close(logs)
+		err := messenger.Subscribe(ctx, topic, logs)
+		if err != nil {
+			c.Logger().Errorf("Kafka subscription for topic '%s' failed: %v", topic, err)
 		}
-	}(&c, &logs)
+	}()
 
-	err := messenger.Subscribe(topic, &logs)
-	if err != nil {
-		c.Response().Write([]byte(err.Error()))
-		c.Response().Flush()
-		return err
+	for {
+		select {
+		case line, ok := <-logs:
+			if !ok {
+				c.Response().Write([]byte("data: [stream closed]\n\n"))
+				c.Response().Flush()
+				return nil
+			}
+			fmt.Fprintf(c.Response(), "data: %s\n\n", line)
+			c.Response().Flush()
+		case <-ctx.Done():
+			return nil
+		}
 	}
-
-	return nil
 }
 
 func AppsToggleOnOFF(c echo.Context) error {
@@ -292,7 +293,9 @@ func CreateApp(c echo.Context) error {
 
 	}()
 
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: struct{Topic string `json:"topic"`}{Topic: topic}})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: struct {
+		Topic string `json:"topic"`
+	}{Topic: topic}})
 }
 
 func RemoveContainer(c echo.Context) error {
