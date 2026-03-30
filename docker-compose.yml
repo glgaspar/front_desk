@@ -23,7 +23,7 @@ services:
       front-desk.logo: https://example.com/logo.png
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/gustavo/p/apps:/src/apps
+      - /mnt/apps:/src/apps
     
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
