@@ -68,7 +68,10 @@ func main() {
 	origins := os.Getenv("FRONT_END_URL")
 	credentials := true
 	enviroment := os.Getenv("ENVIROMENT")
-	if enviroment == "DEV" {credentials = false}
+	if enviroment == "DEV" {
+		credentials = false
+		origins = "*"	
+	}
 	
 	log.Printf("Starting Front Desk in %s environment", enviroment)
 
