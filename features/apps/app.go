@@ -14,6 +14,13 @@ import (
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
 )
 
+type BuildLogMsg struct {
+	App  string `json:"app"`
+	Log  string `json:"log"`
+	Time int64  `json:"time"`
+	Done bool   `json:"done"`
+}
+
 type App struct {
 	Id      string    `json:"id"`
 	Created time.Time `json:"created"`
@@ -77,13 +84,23 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 
 }
 
-func (a *App) CreateApp(compose Compose, topic string, dir string) error {
-	err := os.Mkdir("/src/apps"+dir, 0777)
+func (a *App) sendBuildLog(appName string, message string) error {
+	b, _ := json.Marshal(map[string]interface{}{
+		"app":  appName,
+		"log":  message,
+		"time": time.Now().UnixNano(),
+		"done": false,
+	})
+	return messenger.SendMessage("build-logs", string(b))
+}
+
+func (a *App) CreateApp(compose Compose, appName string, dir string) error {
+	err := os.MkdirAll("/src/apps"+dir, 0777)
 	if err != nil {
 		return err
 	}
 
-	err = messenger.SendMessage(topic, "Directory created.")
+	err = a.sendBuildLog(appName, "Directory created.")
 	if err != nil {
 		return err
 	}
@@ -99,7 +116,7 @@ func (a *App) CreateApp(compose Compose, topic string, dir string) error {
 		return err
 	}
 
-	err = messenger.SendMessage(topic, "Initializing build.")
+	err = a.sendBuildLog(appName, "Initializing build.")
 	if err != nil {
 		return err
 	}
@@ -110,7 +127,7 @@ func (a *App) CreateApp(compose Compose, topic string, dir string) error {
 	}
 	*a = *newApp
 
-	err = messenger.SendMessage(topic, "Build finished.")
+	err = a.sendBuildLog(appName, "Build finished.")
 	if err != nil {
 		return err
 	}
@@ -121,11 +138,11 @@ func (a *App) CreateApp(compose Compose, topic string, dir string) error {
 	}
 
 	if (*container).Config.Labels.Port == nil {
-		return messenger.SendMessage(topic, "App was created but no port provided for tunnel.")
+		return a.sendBuildLog(appName, "App was created but no port provided for tunnel.")
 	}
 
 	if compose.Tunnel != nil && *compose.Tunnel {
-		err = messenger.SendMessage(topic, "Creating Cloudflare tunnel.")
+		err = a.sendBuildLog(appName, "Creating Cloudflare tunnel.")
 		if err != nil {
 			return err
 		}
@@ -135,7 +152,7 @@ func (a *App) CreateApp(compose Compose, topic string, dir string) error {
 		if err != nil {
 			return err
 		}
-		err = messenger.SendMessage(topic, "Tunnel Cloudflare created.")
+		err = a.sendBuildLog(appName, "Tunnel Cloudflare created.")
 		if err != nil {
 			return err
 		}

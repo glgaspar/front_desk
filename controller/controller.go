@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/glgaspar/front_desk/features/apps"
 	"github.com/glgaspar/front_desk/features/integrations"
@@ -26,6 +29,8 @@ type Response struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
 }
+
+var activeBuilds sync.Map
 
 func Signup(c echo.Context) error {
 	var data login.LoginUser
@@ -131,17 +136,31 @@ func GetApps(c echo.Context) error {
 }
 
 func GetWaitingBuilds(c echo.Context) error {
-	data, err := messenger.ListTopics()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	var data []string
+	activeBuilds.Range(func(key, value interface{}) bool {
+		if appName, ok := key.(string); ok {
+			data = append(data, appName)
+		}
+		return true
+	})
+	if data == nil {
+		data = []string{}
 	}
 
-	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d builds pending builds found"), Data: data})
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d pending builds found", len(data)), Data: data})
 }
 
 func ListenToBuild(c echo.Context) error {
-	topic := c.Param("app")
-	logs := make(chan string)
+	appName := c.Param("app")
+	rawLogs := make(chan string)
+
+	val, ok := activeBuilds.Load(appName)
+	if !ok {
+		c.Response().Write([]byte("data: [no active build]\n\n"))
+		c.Response().Flush()
+		return nil
+	}
+	buildStartTime := val.(int64)
 
 	c.Response().Header().Set("Content-Type", "text/event-stream")
 	c.Response().Header().Set("Cache-Control", "no-cache")
@@ -150,23 +169,31 @@ func ListenToBuild(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	go func() {
-		defer close(logs)
-		err := messenger.Subscribe(ctx, topic, logs)
+		defer close(rawLogs)
+		err := messenger.Subscribe(ctx, "build-logs", rawLogs)
 		if err != nil {
-			c.Logger().Errorf("Kafka subscription for topic '%s' failed: %v", topic, err)
+			c.Logger().Errorf("Kafka subscription for topic 'build-logs' failed: %v", err)
 		}
 	}()
 
 	for {
 		select {
-		case line, ok := <-logs:
+		case line, ok := <-rawLogs:
 			if !ok {
 				c.Response().Write([]byte("data: [stream closed]\n\n"))
 				c.Response().Flush()
 				return nil
 			}
-			fmt.Fprintf(c.Response(), "data: %s\n\n", line)
-			c.Response().Flush()
+			var logMsg apps.BuildLogMsg
+			if err := json.Unmarshal([]byte(line), &logMsg); err == nil {
+				if logMsg.App == appName && logMsg.Time >= buildStartTime {
+					fmt.Fprintf(c.Response(), "data: %s\n\n", logMsg.Log)
+					c.Response().Flush()
+					if logMsg.Done {
+						return nil
+					}
+				}
+			}
 		case <-ctx.Done():
 			return nil
 		}
@@ -251,7 +278,7 @@ func CreateApp(c echo.Context) error {
 	}
 
 	var dir string
-	var topic string
+	var appName string
 
 	reader := strings.NewReader(data.Compose)
 
@@ -274,28 +301,49 @@ func CreateApp(c echo.Context) error {
 			if len(parts) != 2 {
 				return fmt.Errorf("invalid front-desk.name label")
 			}
-			topic = strings.TrimSpace(parts[1])
+			appName = strings.TrimSpace(parts[1])
 		}
 	}
 
-	err = messenger.CreateTopic(topic)
+	if dirInfo, err := os.Stat("/src/apps" + dir); err == nil && dirInfo.IsDir() {
+		fileInfo, err := os.Stat("/src/apps" + dir + "/docker-compose.yml")
+		if err == nil {
+			if fileInfo.Size() > 1 {
+				return c.JSON(http.StatusConflict, Response{Status: false, Message: "An app in this directory already exists."})
+			}
+		}
+	}
+
+	activeBuilds.Store(appName, time.Now().UnixNano())
+	app := apps.App{}
+	go func() {
+		defer activeBuilds.Delete(appName)
+		err = app.CreateApp(data, appName, dir)
+
+		var finalMsg string
+		if err != nil {
+			finalMsg = err.Error()
+		} else {
+			finalMsg = "All operations finished."
+		}
+
+		b, _ := json.Marshal(map[string]interface{}{
+			"app":  appName,
+			"log":  finalMsg,
+			"time": time.Now().UnixNano(),
+			"done": true,
+		})
+		messenger.SendMessage("build-logs", string(b))
+
+	}()
+
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	app := apps.App{}
-	go func() {
-		defer messenger.DeleteTopic(topic)
-		err = app.CreateApp(data, topic, dir)
-		if err != nil {
-			messenger.SendMessage(topic, err.Error())
-		}
-
-	}()
-
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: struct {
 		Topic string `json:"topic"`
-	}{Topic: topic}})
+	}{Topic: appName}})
 }
 
 func RemoveContainer(c echo.Context) error {

@@ -9,6 +9,7 @@ import (
 	"github.com/glgaspar/front_desk/controller"
 	"github.com/glgaspar/front_desk/features"
 	"github.com/glgaspar/front_desk/features/integrations"
+	"github.com/glgaspar/front_desk/features/utils/messenger"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -97,6 +98,9 @@ func main() {
 	if err := integrations.CheckAll(); err != nil {
 		panic(err)
 	}
+
+	log.Println("ensuring build-logs topic exists... ")
+	_ = messenger.CreateTopic("build-logs")
 
 	log.Printf("%sall checks done%s", greenBg, reset)
 	log.Println("starting server")

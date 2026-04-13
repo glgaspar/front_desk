@@ -44,14 +44,16 @@ func DeleteTopic(topic string) error {
 }
 
 func SendMessage(topic string, message string) error {
-	controllerConn, err := kafka.Dial("tcp", getKafkaBroker())
-	if err != nil {
-		return err
+	w := &kafka.Writer{
+		Addr:                   kafka.TCP(getKafkaBroker()),
+		Topic:                  topic,
+		AllowAutoTopicCreation: true,
 	}
-	defer controllerConn.Close()
+	defer w.Close()
 
-	_, err = controllerConn.WriteMessages(kafka.Message{Topic: topic, Value: []byte(message)})
-	return err
+	return w.WriteMessages(context.Background(), kafka.Message{
+		Value: []byte(message),
+	})
 }
 
 func ListTopics() ([]string, error) {
@@ -76,14 +78,19 @@ func ListTopics() ([]string, error) {
 
 func Subscribe(ctx context.Context, topic string, logs chan<- string) error {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{getKafkaBroker()},
-		Topic:    topic,
-		MaxBytes: 10e6, // 10MB
+		Brokers:   []string{getKafkaBroker()},
+		Topic:     topic,
+		Partition: 0,
+		MaxBytes:  10e6, // 10MB
 	})
 	defer reader.Close()
 
 	for {
 		m, err := reader.ReadMessage(ctx)
+		fmt.Printf("Received message: %s\n", string(m.Value))
+		if err != nil {
+			fmt.Printf("Error reading message: %v\n", err)
+		}
 		if err != nil {
 			fmt.Println(err)
 			if errors.Is(err, context.Canceled) {
@@ -91,7 +98,7 @@ func Subscribe(ctx context.Context, topic string, logs chan<- string) error {
 			}
 			return err
 		}
-        fmt.Println(string(m.Value))
+		fmt.Println(string(m.Value))
 		select {
 		case logs <- string(m.Value):
 		case <-ctx.Done():
