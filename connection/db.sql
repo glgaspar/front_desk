@@ -33,6 +33,17 @@ CREATE TABLE IF NOT EXISTS frontdesk.pihole (
     CONSTRAINT pihole_single_row CHECK (config_id = 1)
 );
 ----
+CREATE TABLE IF NOT EXISTS frontdesk.transmission (
+    config_id int4 NOT NULL DEFAULT 1,
+    url varchar(255) NOT NULL,
+    username varchar(255) NOT NULL,
+    password varchar(255) NOT NULL,
+    port int4 NULL,
+    protocol varchar(10) NOT NULL DEFAULT 'http',
+    CONSTRAINT transmission_pkey PRIMARY KEY (config_id),
+    CONSTRAINT transmission_single_row CHECK (config_id = 1)
+);
+----
 CREATE TABLE IF NOT EXISTS frontdesk.integrations_available (
     name varchar(50) NOT NULL,
     enabled bool NOT NULL,
@@ -54,7 +65,8 @@ CREATE TABLE IF NOT EXISTS frontdesk.widgets (
     enabled bool NOT NULL DEFAULT false,
     position int4 NOT NULL DEFAULT 999,
     selected bool NOT NULL DEFAULT false,
-    CONSTRAINT widgets_pkey PRIMARY KEY (id)
+    CONSTRAINT widgets_pkey PRIMARY KEY (id),
+    CONSTRAINT widgets_name_unique UNIQUE (name)
 );
 ----
 CREATE OR REPLACE FUNCTION frontdesk.check_widgets_selected_limit()

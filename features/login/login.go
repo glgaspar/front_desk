@@ -83,7 +83,7 @@ func RefreshCookie(cookie *http.Cookie) (*http.Cookie, error) {
 
 	query := `
 	update frontdesk.activesessions
-		token $1,
+		SET token = $1,
 		expire = $2
 	where
 		token = $1

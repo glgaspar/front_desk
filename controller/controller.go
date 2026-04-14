@@ -532,8 +532,8 @@ func TransmissionToggleTorrent(c echo.Context) error {
 	}
 
 	action := c.Param("action")
-	if action != "start" && action != "stop" {
-		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Both Id (int64) and action (\"start\", \"stop\") must be sent"})
+	if action != "start" && action != "stop" && action != "remove" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Both Id (int64) and action (\"start\", \"stop\", \"remove\") must be sent"})
 	}
 
 	t := transmission.Transmission{}
