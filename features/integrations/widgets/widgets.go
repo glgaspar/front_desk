@@ -44,20 +44,20 @@ func (w *Widget) GetList(homeOnly bool) ([]Widget, error) {
 
 	query := `
 	SELECT 
-		id,
-		name,
-		enabled,
-		position,
-		selected
+		w.id,
+		w.name,
+		w.enabled,
+		w.position,
+		w.selected
 	FROM frontdesk.widgets w
 	`
 	if homeOnly {
-		query = `
+		query += `
 		WHERE w.selected = true
 		`
 	}
-	
-	query += `ORDER BY position ASC`
+
+	query += `ORDER BY w.position ASC`
 
 	rows, err := conn.Query(query)
 	if err != nil {
@@ -87,7 +87,7 @@ func (w *Widget) Toggle(toggle string) error {
 	query := `
 	UPDATE frontdesk.widgets
 	`
-	
+
 	switch toggle {
 	case "enabled":
 		query += `
@@ -99,7 +99,7 @@ func (w *Widget) Toggle(toggle string) error {
 		`
 	}
 
-	query +=`
+	query += `
 	WHERE id = $1
 	returning id, name, enabled, position, selected`
 
