@@ -14,7 +14,7 @@ func SetAvailable(name string) error {
 	defer conn.Close()
 	query := `
 	update frontdesk.integrations_available
-	set available = TRUE
+	set enabled = TRUE
 	where name = $1
 	`
 	_, err = conn.Exec(query, name)
@@ -32,7 +32,7 @@ func SetUnavailable(name string) error {
 	defer conn.Close()
 	query := `
 	update frontdesk.integrations_available
-	set available = FALSE
+	set enabled = FALSE
 	where name = $1
 	`
 	_, err = conn.Exec(query, name)
