@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/glgaspar/front_desk/features/utils/messenger"
 
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
@@ -125,7 +126,7 @@ func (a *App) CreateApp(compose Compose, appName string, dir string) error {
 	if err != nil {
 		return err
 	}
-	*a = *newApp
+	a = newApp
 
 	err = a.sendBuildLog(appName, "Build finished.")
 	if err != nil {
@@ -137,11 +138,16 @@ func (a *App) CreateApp(compose Compose, appName string, dir string) error {
 		return err
 	}
 
-	if (*container).Config.Labels.Port == nil {
-		return a.sendBuildLog(appName, "App was created but no port provided for tunnel.")
+	cloudflareEnabled, err := integrations.CheckFor("cloudflare")
+	if err != nil {
+		return err
 	}
 
-	if compose.Tunnel != nil && *compose.Tunnel {
+	if cloudflareEnabled {
+		if (*container).Config.Labels.Port == nil {
+			return a.sendBuildLog(appName, "App was created but no port provided for tunnel.")
+		}
+
 		err = a.sendBuildLog(appName, "Creating Cloudflare tunnel.")
 		if err != nil {
 			return err
