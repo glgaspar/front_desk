@@ -73,7 +73,9 @@ CREATE OR REPLACE FUNCTION frontdesk.check_widgets_selected_limit()
 RETURNS TRIGGER AS 
     $$
     BEGIN
-        IF (SELECT count(*) FROM frontdesk.widgets where selected = true) >= 5 THEN
+        IF NEW.selected = true
+            AND (TG_OP = 'INSERT' OR OLD.selected = false)
+            AND (SELECT count(*) FROM frontdesk.widgets where selected = true and id <> NEW.id) >= 5 THEN
             RAISE EXCEPTION 'Cannot select more than 5 widgets to home';
         END IF;
         RETURN NEW;
