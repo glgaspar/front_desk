@@ -244,6 +244,24 @@ func ListCertificates() ([]Certificate, error) {
 	return certs, err
 }
 
+// npm happily accepts a certificate that doesnt exist, so we check it ourselves
+func (c *Config) checkCertificate(certId int) error {
+	if certId <= 0 {
+		return nil
+	}
+	var certs []Certificate
+	err := c.call("GET", "/api/nginx/certificates", nil, &certs)
+	if err != nil {
+		return err
+	}
+	for _, cert := range certs {
+		if cert.Id == certId {
+			return nil
+		}
+	}
+	return fmt.Errorf("certificate %d does not exist on nginx proxy manager", certId)
+}
+
 func ListSavedRoutes() ([]SavedRoute, error) {
 	conn, err := connection.Db()
 	if err != nil {
@@ -319,6 +337,11 @@ func AddProxyHost(hostname string, localPort string, appDir string, certId int) 
 		return nil, err
 	}
 
+	err = c.checkCertificate(certId)
+	if err != nil {
+		return nil, err
+	}
+
 	hosts, err := c.proxyHosts()
 	if err != nil {
 		return nil, err
@@ -359,6 +382,10 @@ func AddProxyHost(hostname string, localPort string, appDir string, certId int) 
 
 func SetCertificate(hostId int, certId int) error {
 	c, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	err = c.checkCertificate(certId)
 	if err != nil {
 		return err
 	}
