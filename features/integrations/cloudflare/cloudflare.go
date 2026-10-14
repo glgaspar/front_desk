@@ -64,15 +64,32 @@ func (c *Config) SetCloudflare() error {
 		return err
 	}
 
-	// empty token means keep the one we have, the front never gets to see it
-	if c.CloudflareAPIToken == "" {
-		err = conn.QueryRow(`select cloudflareAPIToken from frontdesk.cloudflare`).Scan(&c.CloudflareAPIToken)
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("cloudflare api token is required")
+	// the front never gets to see the ids or the token, so empty means keep the one we have
+	var saved Config
+	err = conn.QueryRow(`select accountId, tunnelId, cloudflareAPIToken, zoneId from frontdesk.cloudflare`).Scan(&saved.AccountId, &saved.TunnelId, &saved.CloudflareAPIToken, &saved.ZoneId)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+
+	for _, field := range []struct {
+		name         string
+		value, saved *string
+	}{
+		{"account id", &c.AccountId, &saved.AccountId},
+		{"tunnel id", &c.TunnelId, &saved.TunnelId},
+		{"api token", &c.CloudflareAPIToken, &saved.CloudflareAPIToken},
+		{"zone id", &c.ZoneId, &saved.ZoneId},
+	} {
+		*field.value = strings.TrimSpace(*field.value)
+		if *field.value == "" {
+			*field.value = *field.saved
 		}
-		if err != nil {
-			return err
+		if *field.value == "" {
+			return fmt.Errorf("cloudflare %s is required", field.name)
 		}
+	}
+	if strings.TrimSpace(c.LocalAddress) == "" {
+		return fmt.Errorf("cloudflare local address is required")
 	}
 
 	tran, err := conn.Begin()
@@ -138,17 +155,17 @@ func loadConfig() (*Config, error) {
 	return c, nil
 }
 
-// everything but the token
+// only says what is set, the ids are nobody business
 func PublicConfig() (map[string]interface{}, error) {
 	c, err := loadConfig()
 	if err != nil {
 		return nil, err
 	}
 	return map[string]interface{}{
-		"accountId":    c.AccountId,
-		"tunnelId":     c.TunnelId,
 		"localAddress": c.LocalAddress,
-		"zoneId":       c.ZoneId,
+		"accountIdSet": c.AccountId != "",
+		"tunnelIdSet":  c.TunnelId != "",
+		"zoneIdSet":    c.ZoneId != "",
 		"tokenSet":     c.CloudflareAPIToken != "",
 	}, nil
 }
