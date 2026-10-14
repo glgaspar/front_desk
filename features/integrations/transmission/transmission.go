@@ -3,7 +3,10 @@ package transmission
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/glgaspar/front_desk/connection"
 	"github.com/hekmon/transmissionrpc/v3"
@@ -72,24 +75,30 @@ func (t *Transmission) Connect() error {
 		return err
 	}
 
-	
-	endpoint, err := url.Parse(fmt.Sprintf("%s://%s:%s@%s:%d/transmission/rpc", config.Protocol, config.Username, config.Password, config.Url, config.Port))
-	if err != nil {
-		panic(err)
+	// building it by hand so a weird char in the password doesnt break everything
+	endpoint := &url.URL{
+		Scheme: config.Protocol,
+		User:   url.UserPassword(config.Username, config.Password),
+		Host:   net.JoinHostPort(config.Url, strconv.Itoa(config.Port)),
+		Path:   "/transmission/rpc",
 	}
 
 	t.Client, err = transmissionrpc.New(endpoint, nil)
 	if err != nil {
-		panic(err)
+		fmt.Println("Error:", err)
+		return err
 	}
 
 	return nil
 }
 
 func (t *Transmission) ValidadeVersion() error {
-	ok, serverVersion, serverMinimumVersion, err := t.Client.RPCVersion(context.TODO())
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	ok, serverVersion, serverMinimumVersion, err := t.Client.RPCVersion(ctx)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("could not reach transmission: %v", err)
 	}
 	if !ok {
 		return fmt.Errorf("Remote transmission RPC version (v%d) is incompatible with the transmission library (v%d): remote needs at least v%d",
@@ -111,7 +120,10 @@ func (t *Transmission) GetAllTorrents() (*[]transmissionrpc.Torrent, error) {
 		return nil, err
 	}
 
-	torrents, err := t.Client.TorrentGetAll(context.TODO())
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	torrents, err := t.Client.TorrentGetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,13 +148,16 @@ func (t *Transmission) ToggleTorrent(id int64, action string) error {
 		DeleteLocalData: false,
 	} 
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	switch action {
 		case "start":
-			err = t.Client.TorrentStartIDs(context.TODO(), ids)
+			err = t.Client.TorrentStartIDs(ctx, ids)
 		case "stop":
-			err = t.Client.TorrentStopIDs(context.TODO(), ids)
+			err = t.Client.TorrentStopIDs(ctx, ids)
 		case "remove":
-			err = t.Client.TorrentRemove(context.TODO(), idsRemove)
+			err = t.Client.TorrentRemove(ctx, idsRemove)
 		default:
 			return fmt.Errorf("unknown action: %s", action)
 	}
