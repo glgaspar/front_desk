@@ -141,6 +141,11 @@ func main() {
 	e.POST("/apps/create", controller.CreateApp)
 	e.DELETE("/apps/remove/:id", controller.RemoveContainer)
 	e.GET("/apps/logs/:id", controller.GetLogs)
+	e.PUT("/apps/restart/:id", controller.RestartApp)
+	e.POST("/apps/update/:id", controller.UpdateApp)
+	e.GET("/apps/update/:id", controller.CheckAppUpdate)
+	e.GET("/apps/updates", controller.GetAppUpdates)
+	e.GET("/apps/stats", controller.GetAppStats)
 
 	e.GET("/system/usage", controller.GetSystemUsage)
 	

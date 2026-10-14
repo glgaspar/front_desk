@@ -343,6 +343,81 @@ func startBuild(appName string, build func() error) bool {
 	return true
 }
 
+func RestartApp(c echo.Context) error {
+	id := c.Param("id")
+	if !apps.ValidID(id) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid id"})
+	}
+
+	app := new(apps.App)
+	err := app.Restart(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: app})
+}
+
+func UpdateApp(c echo.Context) error {
+	id := c.Param("id")
+	if !apps.ValidID(id) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid id"})
+	}
+
+	container := apps.Container{ID: id}
+	app, err := container.GetApp()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	started := startBuild(app.Name, app.Update)
+	if !started {
+		return c.JSON(http.StatusConflict, Response{Status: false, Message: "There is already a build running for " + app.Name})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: struct {
+		Topic string `json:"topic"`
+	}{Topic: app.Name}})
+}
+
+func CheckAppUpdate(c echo.Context) error {
+	id := c.Param("id")
+	if !apps.ValidID(id) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid id"})
+	}
+
+	container := apps.Container{ID: id}
+	app, err := container.GetApp()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	status, err := apps.CheckUpdate(app.ImageRef, c.QueryParam("force") == "true")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: status})
+}
+
+func GetAppUpdates(c echo.Context) error {
+	updates, err := apps.GetAllUpdates(c.QueryParam("force") == "true")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d images checked", len(updates)), Data: updates})
+}
+
+func GetAppStats(c echo.Context) error {
+	stats, err := apps.GetStats()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: stats})
+}
+
 func RemoveContainer(c echo.Context) error {
 	id := c.Param("id")
 	if !apps.ValidID(id) {

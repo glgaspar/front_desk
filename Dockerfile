@@ -14,7 +14,7 @@ RUN apt-get update && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" | \
     tee /etc/apt/sources.list.d/docker.list > /dev/null && \
     apt-get update && \
-    apt-get install -y docker-ce-cli docker-compose-plugin jq unzip && \
+    apt-get install -y docker-ce-cli docker-compose-plugin docker-buildx-plugin jq unzip && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy Go module files and download dependencies

@@ -22,6 +22,7 @@ type Container struct {
 	Name         string `json:"Name"`
 	RestartCount int    `json:"RestartCount"`
 	Config       struct {
+		Image  string `json:"Image"`
 		Labels struct {
 			Name string  `json:"front-desk.name"`
 			Url  string  `json:"front-desk.url"`
@@ -39,13 +40,15 @@ type Compose struct {
 
 func (c *Container) Translate() App {
 	return App{
-		Id:      c.ID,
-		Created: c.Created,
-		Image:   c.Image,
-		Name:    c.Config.Labels.Name,
-		Url:     c.Config.Labels.Url,
-		Dir:     c.Config.Labels.Dir,
-		Logo:    c.Config.Labels.Logo,
+		Id:             c.ID,
+		Created:        c.Created,
+		Image:          c.Image,
+		ImageRef:       c.Config.Image,
+		CloudflarePort: c.Config.Labels.Port,
+		Name:           c.Config.Labels.Name,
+		Url:            c.Config.Labels.Url,
+		Dir:            c.Config.Labels.Dir,
+		Logo:           c.Config.Labels.Logo,
 		State: struct {
 			Status     string    `json:"status"`
 			ExitCode   int       `json:"exitCode"`

@@ -25,14 +25,16 @@ type BuildLogMsg struct {
 }
 
 type App struct {
-	Id      string    `json:"id"`
-	Created time.Time `json:"created"`
-	Image   string    `json:"image"`
-	Name    string    `json:"name"`
-	Url     string    `json:"url"`
-	Dir     string    `json:"dir"`
-	Logo    *string   `json:"logo"`
-	State   struct {
+	Id             string    `json:"id"`
+	Created        time.Time `json:"created"`
+	Image          string    `json:"image"`
+	ImageRef       string    `json:"imageRef"`
+	CloudflarePort *string   `json:"cloudflarePort"`
+	Name           string    `json:"name"`
+	Url            string    `json:"url"`
+	Dir            string    `json:"dir"`
+	Logo           *string   `json:"logo"`
+	State          struct {
 		Status     string    `json:"status"`
 		ExitCode   int       `json:"exitCode"`
 		Error      string    `json:"error"`

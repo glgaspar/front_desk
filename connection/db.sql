@@ -87,3 +87,13 @@ DROP TRIGGER IF EXISTS trigger_check_widgets_selected_limit ON frontdesk.widgets
 CREATE TRIGGER trigger_check_widgets_selected_limit
 BEFORE INSERT OR UPDATE ON frontdesk.widgets
 FOR EACH ROW EXECUTE FUNCTION frontdesk.check_widgets_selected_limit();
+----
+CREATE TABLE IF NOT EXISTS frontdesk.image_update_checks (
+    image_ref varchar(512) NOT NULL,
+    local_digest varchar(128) NULL,
+    remote_digest varchar(128) NULL,
+    status varchar(20) NOT NULL,
+    error text NULL,
+    checked_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT image_update_checks_pkey PRIMARY KEY (image_ref)
+);
