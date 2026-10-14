@@ -127,6 +127,7 @@ func main() {
 	}
 	e.Use(controller.ActivityLogger)
 
+	// controller.AdminOnly on everything that changes the state of something
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") 
 	})
@@ -139,8 +140,8 @@ func main() {
 	e.POST("/activity", controller.TrackActivity)
 	e.GET("/users", controller.GetUsers)
 	e.PUT("/users/:id", controller.UpdateUser)
-	e.PUT("/users/:id/admin", controller.SetUserAdmin)
-	e.DELETE("/users/:id", controller.DeleteUser)
+	e.PUT("/users/:id/admin", controller.SetUserAdmin, controller.AdminOnly)
+	e.DELETE("/users/:id", controller.DeleteUser, controller.AdminOnly)
 	
 	e.GET("/validate", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") //returns ok if the middleware validation passed
@@ -149,14 +150,14 @@ func main() {
 	e.GET("/apps", controller.GetApps)
 	e.GET("/apps/waitingBuilds", controller.GetWaitingBuilds)
 	e.GET("/apps/waitingBuilds/:app", controller.ListenToBuild)
-	e.PUT("/apps/toggleOnOff/:id/:toggle", controller.AppsToggleOnOFF)
-	e.GET("/apps/compose/:id", controller.GetCompose)
-	e.POST("/apps/compose/:id", controller.SaveCompose)
-	e.POST("/apps/create", controller.CreateApp)
-	e.DELETE("/apps/remove/:id", controller.RemoveContainer)
+	e.PUT("/apps/toggleOnOff/:id/:toggle", controller.AppsToggleOnOFF, controller.AdminOnly)
+	e.GET("/apps/compose/:id", controller.GetCompose, controller.AdminOnly)
+	e.POST("/apps/compose/:id", controller.SaveCompose, controller.AdminOnly)
+	e.POST("/apps/create", controller.CreateApp, controller.AdminOnly)
+	e.DELETE("/apps/remove/:id", controller.RemoveContainer, controller.AdminOnly)
 	e.GET("/apps/logs/:id", controller.GetLogs)
-	e.PUT("/apps/restart/:id", controller.RestartApp)
-	e.POST("/apps/update/:id", controller.UpdateApp)
+	e.PUT("/apps/restart/:id", controller.RestartApp, controller.AdminOnly)
+	e.POST("/apps/update/:id", controller.UpdateApp, controller.AdminOnly)
 	e.GET("/apps/update/:id", controller.CheckAppUpdate)
 	e.GET("/apps/updates", controller.GetAppUpdates)
 	e.GET("/apps/stats", controller.GetAppStats)
@@ -168,37 +169,37 @@ func main() {
 	e.GET("/monitoring/metrics", controller.GetMetricsHistory)
 
 	e.GET("/notifications", controller.GetNotifications)
-	e.POST("/notifications", controller.CreateNotification)
-	e.PUT("/notifications/:id", controller.UpdateNotification)
-	e.DELETE("/notifications/:id", controller.DeleteNotification)
-	e.POST("/notifications/:id/test", controller.TestNotification)
+	e.POST("/notifications", controller.CreateNotification, controller.AdminOnly)
+	e.PUT("/notifications/:id", controller.UpdateNotification, controller.AdminOnly)
+	e.DELETE("/notifications/:id", controller.DeleteNotification, controller.AdminOnly)
+	e.POST("/notifications/:id/test", controller.TestNotification, controller.AdminOnly)
 	
 	e.POST("/widgets", controller.CreateWidget)
 	e.GET("/widgets", controller.GetWidgets)
-	e.PUT("/widgets/toggle/:id/:toggle", controller.ToggleWidget)
+	e.PUT("/widgets/toggle/:id/:toggle", controller.ToggleWidget, controller.AdminOnly)
 
-	e.POST("/cloudflare/config", controller.SetCloudflare)
+	e.POST("/cloudflare/config", controller.SetCloudflare, controller.AdminOnly)
 	e.GET("/cloudflare/config", controller.GetCloudflare)
 	e.GET("/cloudflare/routes", controller.GetCloudflareRoutes)
 	e.GET("/cloudflare/dns", controller.GetCloudflareDNS)
-	e.POST("/cloudflare/hostname", controller.AddCloudflareHostname)
-	e.DELETE("/cloudflare/hostname/:hostname", controller.RemoveCloudflareHostname)
+	e.POST("/cloudflare/hostname", controller.AddCloudflareHostname, controller.AdminOnly)
+	e.DELETE("/cloudflare/hostname/:hostname", controller.RemoveCloudflareHostname, controller.AdminOnly)
 
-	e.POST("/npm/config", controller.SetNPM)
+	e.POST("/npm/config", controller.SetNPM, controller.AdminOnly)
 	e.GET("/npm/config", controller.GetNPM)
 	e.GET("/npm/hosts", controller.GetNPMHosts)
 	e.GET("/npm/certificates", controller.GetNPMCertificates)
-	e.POST("/npm/hosts", controller.AddNPMHost)
-	e.PUT("/npm/hosts/:id/certificate", controller.SetNPMCertificate)
-	e.DELETE("/npm/hosts/:id", controller.RemoveNPMHost)
+	e.POST("/npm/hosts", controller.AddNPMHost, controller.AdminOnly)
+	e.PUT("/npm/hosts/:id/certificate", controller.SetNPMCertificate, controller.AdminOnly)
+	e.DELETE("/npm/hosts/:id", controller.RemoveNPMHost, controller.AdminOnly)
 
-	e.POST("/pihole/config", controller.SetPihole)
+	e.POST("/pihole/config", controller.SetPihole, controller.AdminOnly)
 	e.GET("/pihole/config", controller.GetPihole)
 	e.GET("/pihole/history", controller.PiholeHistory)
 
-	e.POST("/transmission/config", controller.SetTransmission)
+	e.POST("/transmission/config", controller.SetTransmission, controller.AdminOnly)
 	e.GET("/transmission/config", controller.GetTransmission)
-	e.POST("/transmission/toggle/:id/:action", controller.TransmissionToggleTorrent)
+	e.POST("/transmission/toggle/:id/:action", controller.TransmissionToggleTorrent, controller.AdminOnly)
 	e.GET("/transmission/torrents", controller.GetTransmissionTorrents)
 
 

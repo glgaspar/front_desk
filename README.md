@@ -83,12 +83,23 @@ labels:
   front-desk.port: 8096   # used by cloudflare and nginx proxy manager (front-desk.cloudflare-port still works)
 ```
 
+## Users and admins
+
+*   The first user is the admin. If you are updating from a version without admins, your oldest user gets promoted on startup.
+*   Regular users can look at everything and change only their own name and password.
+*   Only admins can change the state of anything: start/stop/restart/update apps, edit or delete them, change any config, integration, widget or notification, and manage users.
+*   Everything people do is written to the activity log (`GET /activity`). Admins see everyone, regular users see only themselves. It is kept for `ACTIVITY_RETENTION_DAYS` (default 90).
+
 ## Key API Endpoints
 
 ### Authentication
-*   `POST /register` - Register the initial user (Requires `FIRST_ACCESS=YES` in env).
+*   `POST /register` - Register the first user (while there are no users), after that only admins can create users.
 *   `POST /login` - Authenticate and receive a session cookie.
 *   `GET /login/logout` - Destroy the current session.
+*   `GET /me` - Who is logged in.
+*   `GET /users`, `PUT /users/:id` - List users and change name/password (yours, or anyone if you are an admin).
+*   `PUT /users/:id/admin`, `DELETE /users/:id` - Admin only.
+*   `GET /activity`, `POST /activity` - Read the activity log, or log something the front end did.
 
 ### Applications (Docker Management)
 *   `GET /apps` - List all installed applications/containers.

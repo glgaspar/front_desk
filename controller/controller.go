@@ -285,6 +285,17 @@ func DeleteUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "User removed"})
 }
 
+// regular users can look, only admins can touch
+func AdminOnly(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user := CurrentUser(c)
+		if user == nil || !user.IsAdmin {
+			return c.JSON(http.StatusForbidden, Response{Status: false, Message: "Only admins can do that"})
+		}
+		return next(c)
+	}
+}
+
 func Me(c echo.Context) error {
 	user := CurrentUser(c)
 	if user == nil {
