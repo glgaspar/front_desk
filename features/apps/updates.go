@@ -2,6 +2,7 @@ package apps
 
 import (
 	"context"
+	"errors"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -17,7 +18,7 @@ type UpdateStatus struct {
 	ImageRef     string    `json:"imageRef"`
 	LocalDigest  string    `json:"localDigest"`
 	RemoteDigest string    `json:"remoteDigest"`
-	Status       string    `json:"status"` // up_to_date | update_available | unsupported | error
+	Status       string    `json:"status"` // up_to_date | update_available | unsupported | rate_limited | error
 	Error        string    `json:"error"`
 	CheckedAt    time.Time `json:"checkedAt"`
 }
@@ -96,29 +97,28 @@ func askRegistry(ref string) UpdateStatus {
 	}
 	_, status.LocalDigest, _ = strings.Cut(localDigests[0], "@")
 
-	output, err = runDocker(ctx, "", "buildx", "imagetools", "inspect", ref, "--format", "{{json .Manifest}}")
+	remote, err := remoteDigest(ctx, ref)
+	if errors.Is(err, errPinned) {
+		status.Status = "unsupported"
+		return status
+	}
+	if errors.Is(err, errRateLimited) {
+		status.Status = "rate_limited"
+		status.Error = err.Error()
+		return status
+	}
 	if err != nil {
 		status.Status = "error"
-		status.Error = strings.TrimSpace(err.Error())
+		status.Error = err.Error()
 		return status
 	}
-
-	var manifest struct {
-		Digest string `json:"digest"`
-	}
-	err = json.Unmarshal(output, &manifest)
-	if err != nil || manifest.Digest == "" {
-		status.Status = "error"
-		status.Error = "could not read remote digest"
-		return status
-	}
-	status.RemoteDigest = manifest.Digest
+	status.RemoteDigest = remote
 
 	status.Status = "update_available"
 	for _, local := range localDigests {
-		if strings.HasSuffix(local, "@"+manifest.Digest) {
+		if strings.HasSuffix(local, "@"+remote) {
 			status.Status = "up_to_date"
-			status.LocalDigest = manifest.Digest
+			status.LocalDigest = remote
 			break
 		}
 	}
@@ -150,7 +150,7 @@ func GetAllUpdates(force bool) (map[string]UpdateStatus, error) {
 	result := map[string]UpdateStatus{}
 	var lock sync.Mutex
 	var wg sync.WaitGroup
-	limit := make(chan struct{}, 3)
+	limit := make(chan struct{}, 2)
 
 	for ref := range refs {
 		wg.Add(1)
