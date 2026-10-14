@@ -48,9 +48,13 @@ FRONT_END_URL=http://localhost:3000
 DOMAIN_NAME=localhost
 FIRST_ACCESS=YES
 # Database configurations (used by connection package)
-DB_HOST=...
-DB_USER=...
-DB_PASSWORD=...
+PG_HOST=...
+PG_PORT=5432
+PG_USER=...
+PG_PASSWORD=...
+PG_DBNAME=...
+# where your apps live. use the same path inside and outside the container
+APPS_DIR=/mnt/apps
 # Kafka Configurations
 KAFKA_IP=kafka
 KAFKA_PORT=29092
@@ -63,6 +67,8 @@ The provided `docker-compose.yml` includes the API, Kafka, and Zookeeper. The AP
 ```bash
 docker compose up -d --build
 ```
+
+The apps folder is mounted with the **same path** on the host and inside the container (`/mnt/apps:/mnt/apps`). Docker compose resolves relative volumes (`./data`) from the project folder and the docker daemon reads that path on the host, so if the paths are different your app volumes end up in the wrong place. If you change it, change `APPS_DIR` too.
 
 ## Key API Endpoints
 

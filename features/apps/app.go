@@ -2,10 +2,12 @@ package apps
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -41,21 +43,12 @@ type App struct {
 
 func (a *App) GetList() ([]App, error) {
 	var appList []App
-	var containerList []Container
-	cmd := exec.Command("sh", "-c", "docker inspect $(docker ps -a -q)")
-	output, err := cmd.Output()
+	output, err := runDocker(context.Background(), "", "ps", "-a", "-q")
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if strings.Contains(string(exitErr.Stderr), "requires at least 1 argument") {
-				return appList, nil
-			}
-			return appList, fmt.Errorf("\n%s", exitErr.Stderr)
-		}
-		fmt.Println("Error:", err)
 		return appList, err
 	}
 
-	err = json.Unmarshal(output, &containerList)
+	containerList, err := inspect(strings.Fields(string(output))...)
 	if err != nil {
 		return appList, err
 	}
@@ -68,11 +61,16 @@ func (a *App) GetList() ([]App, error) {
 }
 
 func (a *App) ToggleOnOFF(id string, toggle string) error {
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("docker %s %s", toggle, id))
-	output, err := cmd.CombinedOutput()
+	if !ValidID(id) {
+		return fmt.Errorf("invalid id: %s", id)
+	}
+	if toggle != "start" && toggle != "stop" {
+		return fmt.Errorf("invalid toggle: %s", toggle)
+	}
+
+	_, err := runDocker(context.Background(), "", toggle, id)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return fmt.Errorf("\n%s", output)
+		return err
 	}
 
 	container := Container{ID: id}
@@ -85,39 +83,47 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 
 }
 
-func (a *App) sendBuildLog(appName string, message string) error {
-	b, _ := json.Marshal(map[string]interface{}{
-		"app":  appName,
-		"log":  message,
-		"time": time.Now().UnixNano(),
-		"done": false,
+func SendBuildLog(appName string, message string) error {
+	return sendBuild(appName, message, false)
+}
+
+func SendBuildDone(appName string, message string) error {
+	return sendBuild(appName, message, true)
+}
+
+func sendBuild(appName string, message string, done bool) error {
+	b, _ := json.Marshal(BuildLogMsg{
+		App:  appName,
+		Log:  message,
+		Time: time.Now().UnixNano(),
+		Done: done,
 	})
 	return messenger.SendMessage("build-logs", string(b))
 }
 
 func (a *App) CreateApp(compose Compose, appName string, dir string) error {
-	err := os.MkdirAll("/src/apps"+dir, 0777)
+	path, err := AppPath(dir)
 	if err != nil {
 		return err
 	}
 
-	err = a.sendBuildLog(appName, "Directory created.")
+	err = os.MkdirAll(path, 0777)
 	if err != nil {
 		return err
 	}
 
-	err = os.Chdir("/src/apps" + dir)
+	err = SendBuildLog(appName, "Directory created.")
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile("docker-compose.yml", []byte(compose.Compose), 0644)
+	err = os.WriteFile(filepath.Join(path, "docker-compose.yml"), []byte(compose.Compose), 0644)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
 		return err
 	}
 
-	err = a.sendBuildLog(appName, "Initializing build.")
+	err = SendBuildLog(appName, "Initializing build.")
 	if err != nil {
 		return err
 	}
@@ -128,7 +134,7 @@ func (a *App) CreateApp(compose Compose, appName string, dir string) error {
 	}
 	a = newApp
 
-	err = a.sendBuildLog(appName, "Build finished.")
+	err = SendBuildLog(appName, "Build finished.")
 	if err != nil {
 		return err
 	}
@@ -145,10 +151,10 @@ func (a *App) CreateApp(compose Compose, appName string, dir string) error {
 
 	if cloudflareEnabled {
 		if (*container).Config.Labels.Port == nil {
-			return a.sendBuildLog(appName, "App was created but no port provided for tunnel.")
+			return SendBuildLog(appName, "App was created but no port provided for tunnel.")
 		}
 
-		err = a.sendBuildLog(appName, "Creating Cloudflare tunnel.")
+		err = SendBuildLog(appName, "Creating Cloudflare tunnel.")
 		if err != nil {
 			return err
 		}
@@ -158,7 +164,7 @@ func (a *App) CreateApp(compose Compose, appName string, dir string) error {
 		if err != nil {
 			return err
 		}
-		err = a.sendBuildLog(appName, "Tunnel Cloudflare created.")
+		err = SendBuildLog(appName, "Tunnel Cloudflare created.")
 		if err != nil {
 			return err
 		}
@@ -179,24 +185,12 @@ func (a *App) GetPath() (string, error) {
 }
 
 func (a *App) GetContainer() (*Container, error) {
-	err := os.Chdir("/src/apps" + a.Dir)
+	path, err := AppPath(a.Dir)
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := exec.Command("sh", "-c", "docker inspect $(docker compose ps -q)")
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("\n%s", exitErr.Stderr)
-		}
-		return nil, err
-	}
-
-	var containerList []Container
-
-	err = json.Unmarshal(output, &containerList)
+	containerList, err := inspectCompose(path)
 	if err != nil {
 		return nil, err
 	}
@@ -208,8 +202,13 @@ func (a *App) GetContainer() (*Container, error) {
 	return nil, fmt.Errorf("%d containers returned for that ID", len(containerList))
 }
 
-func (a *App) GetLogs(channel *chan string) error {
-	cmd := exec.Command("docker", "logs", "-f", a.Id)
+// dies with the context, so when the browser leaves we stop following the logs
+func (a *App) GetLogs(ctx context.Context, onLine func(string)) error {
+	if !ValidID(a.Id) {
+		return fmt.Errorf("invalid id: %s", a.Id)
+	}
+
+	cmd := exec.CommandContext(ctx, "docker", "logs", "-f", "--tail", "500", a.Id)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -223,14 +222,12 @@ func (a *App) GetLogs(channel *chan string) error {
 	}
 
 	scanner := bufio.NewScanner(stdout)
-	go func(scanner *bufio.Scanner, channel *chan string) {
-		for scanner.Scan() {
-			line := scanner.Text()
-			*channel <- line
-		}
-	}(scanner, channel)
+	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		onLine(scanner.Text())
+	}
 
-	if err := cmd.Wait(); err != nil {
+	if err := cmd.Wait(); err != nil && ctx.Err() == nil {
 		return fmt.Errorf("command finished with error: %v", err)
 	}
 	return nil
@@ -240,31 +237,26 @@ func (a *App) GetApp() error {
 	if a.Id == "" && a.Dir == "" {
 		return fmt.Errorf("either id or dir must be provided to reach app")
 	}
-	var command string
+
+	var containerList []Container
+	var err error
 	if a.Dir != "" {
-		err := os.Chdir("/src/apps" + a.Dir)
+		path, err := AppPath(a.Dir)
 		if err != nil {
 			return err
 		}
-		command = "docker inspect $(docker compose ps -q)"
-	} else {
-		command = "docker inspect " + a.Id
-	}
-
-	cmd := exec.Command("sh", "-c", command)
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("\n%s", exitErr.Stderr)
+		containerList, err = inspectCompose(path)
+		if err != nil {
+			return err
 		}
-		return err
-	}
-	var containerList []Container
-
-	err = json.Unmarshal(output, &containerList)
-	if err != nil {
-		return err
+	} else {
+		if !ValidID(a.Id) {
+			return fmt.Errorf("invalid id: %s", a.Id)
+		}
+		containerList, err = inspect(a.Id)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(containerList) == 1 {

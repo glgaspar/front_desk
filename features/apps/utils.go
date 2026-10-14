@@ -1,33 +1,22 @@
 package apps
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
-	"fmt"
-	"os"
-	"os/exec"
 )
 
-func Rebuild(path string) (*App, error) {
-	os.Chdir("/mnt/apps" + path)
-	cmd := exec.Command("sh", "-c", "docker compose up -d --build")
-	_, err := cmd.CombinedOutput()
+func Rebuild(dir string) (*App, error) {
+	path, err := AppPath(dir)
 	if err != nil {
-		return nil, fmt.Errorf("\n%s", cmd.Stdout)
-	}
-
-	var containerList []Container
-	cmd = exec.Command("sh", "-c", "docker inspect $(docker compose ps -q)")
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("\n%s", exitErr.Stderr)
-		}
 		return nil, err
 	}
 
-	err = json.Unmarshal(output, &containerList)
+	_, err = runDocker(context.Background(), path, "compose", "up", "-d", "--build")
+	if err != nil {
+		return nil, err
+	}
+
+	containerList, err := inspectCompose(path)
 	if err != nil {
 		return nil, err
 	}
@@ -39,13 +28,4 @@ func Rebuild(path string) (*App, error) {
 	newApp := containerList[0].Translate()
 	return &newApp, nil
 
-}
-
-func Prune() error {
-	cmd := exec.Command("sh", "-c", "docker system prune")
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("\n%s", cmd.Stdout)
-	}
-	return nil
 }

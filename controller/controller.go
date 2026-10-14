@@ -203,7 +203,7 @@ func ListenToBuild(c echo.Context) error {
 func AppsToggleOnOFF(c echo.Context) error {
 	id := c.Param("id")
 	toggle := c.Param("toggle")
-	if (toggle != "start" && toggle != "stop") || id == "" {
+	if (toggle != "start" && toggle != "stop") || !apps.ValidID(id) {
 		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Both Id (str) and toggle (\"start\", \"stop\") must be sent"})
 	}
 
@@ -227,8 +227,8 @@ func GetSystemUsage(c echo.Context) error {
 
 func GetCompose(c echo.Context) error {
 	id := c.Param("id")
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
+	if !apps.ValidID(id) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid id"})
 	}
 
 	container := apps.Container{ID: id}
@@ -242,8 +242,8 @@ func GetCompose(c echo.Context) error {
 
 func SaveCompose(c echo.Context) error {
 	id := c.Param("id")
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
+	if !apps.ValidID(id) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid id"})
 	}
 	var data apps.Compose
 	body, err := io.ReadAll(c.Request().Body)
@@ -348,8 +348,8 @@ func CreateApp(c echo.Context) error {
 
 func RemoveContainer(c echo.Context) error {
 	id := c.Param("id")
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be sent"})
+	if !apps.ValidID(id) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid id"})
 	}
 
 	container := apps.Container{ID: id}
@@ -363,13 +363,11 @@ func RemoveContainer(c echo.Context) error {
 
 func GetLogs(c echo.Context) error {
 	id := c.Param("id")
-	if id == "" {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: "Id must be sent"})
+	if !apps.ValidID(id) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid id"})
 	}
 
-	logs := make(chan string)
 	app := apps.App{Id: id}
-
 	err := app.GetApp()
 	if err != nil {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
@@ -377,30 +375,17 @@ func GetLogs(c echo.Context) error {
 	c.Response().Header().Set("Content-Type", "text/event-stream")
 	c.Response().Header().Set("Cache-Control", "no-cache")
 	c.Response().Header().Set("Connection", "keep-alive")
-	go func(c *echo.Context, logs *chan string) {
-		for {
-			select {
-			case line, ok := <-*logs:
-				if !ok {
-					(*c).Response().Write([]byte("data: [connection closed]\n\n"))
-					(*c).Response().Flush()
-					return
-				}
-				fmt.Fprintf((*c).Response(), "data: %s\n\n", line)
-				(*c).Response().Flush()
-			case <-(*c).Request().Context().Done():
-				return
-			}
-		}
-	}(&c, &logs)
 
-	err = app.GetLogs(&logs)
-	if err != nil {
-		c.Response().Write([]byte(err.Error()))
+	err = app.GetLogs(c.Request().Context(), func(line string) {
+		fmt.Fprintf(c.Response(), "data: %s\n\n", line)
 		c.Response().Flush()
-		return err
+	})
+	if err != nil {
+		fmt.Fprintf(c.Response(), "data: %s\n\n", err.Error())
 	}
 
+	c.Response().Write([]byte("data: [connection closed]\n\n"))
+	c.Response().Flush()
 	return nil
 }
 

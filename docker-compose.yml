@@ -10,6 +10,8 @@ services:
       - 42069:8080
     env_file:
       - .env
+    environment:
+      APPS_DIR: /mnt/apps
     healthcheck:
       test: curl --fail http://localhost:8080 || exit 1
       interval: 10m
@@ -23,7 +25,7 @@ services:
       front-desk.logo: https://example.com/logo.png
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /mnt/apps:/src/apps
+      - /mnt/apps:/mnt/apps
     
   zookeeper:
     image: confluentinc/cp-zookeeper:latest

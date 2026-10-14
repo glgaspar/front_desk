@@ -1,10 +1,10 @@
 package apps
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -63,18 +63,11 @@ func (c *Container) Translate() App {
 }
 
 func (a *Container) GetApp() (*App, error) {
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("docker inspect %s", a.ID))
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("\n%s", exitErr.Stderr)
-		}
-		return nil, err
+	if !ValidID(a.ID) {
+		return nil, fmt.Errorf("invalid id: %s", a.ID)
 	}
-	var containerList []Container
 
-	err = json.Unmarshal(output, &containerList)
+	containerList, err := inspect(a.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -94,12 +87,12 @@ func (c *Container) GetCompose() (string, error) {
 		return compose, err
 	}
 
-	path, err := app.GetPath()
+	path, err := AppPath(app.Dir)
 	if err != nil {
 		return compose, err
 	}
 
-	file, err := os.ReadFile("/src/apps" + path + "/docker-compose.yml")
+	file, err := os.ReadFile(filepath.Join(path, "docker-compose.yml"))
 	if err != nil {
 		return compose, err
 	}
@@ -112,16 +105,17 @@ func (c *Container) SaveCompose(compose Compose) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	path, err := app.GetPath()
+	path, err := AppPath(app.Dir)
 	if err != nil {
 		return nil, err
 	}
-	err = os.WriteFile("/src/apps"+path+"/docker-compose.yml", []byte(compose.Compose), 0644)
+	err = os.WriteFile(filepath.Join(path, "docker-compose.yml"), []byte(compose.Compose), 0644)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
+		return nil, err
 	}
 
-	return Rebuild(path)
+	return Rebuild(app.Dir)
 }
 
 func (c *Container) RemoveContainer() error {
@@ -129,28 +123,18 @@ func (c *Container) RemoveContainer() error {
 	if err != nil {
 		return err
 	}
-	path, err := app.GetPath()
+	path, err := AppPath(app.Dir)
 	if err != nil {
 		return err
 	}
 
-	err = os.Chdir("/src/apps" + path)
-	if err != nil {
-		return err
-	}
-	cmd := exec.Command("sh", "-c", "docker compose down --rmi all")
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return fmt.Errorf("\n%s", cmd.Stdout)
-	}
-
-	err = Prune()
+	// only the images this app built. prune used to clean the whole server, oops
+	_, err = runDocker(context.Background(), path, "compose", "down", "--rmi", "local")
 	if err != nil {
 		return err
 	}
 
-	err = os.RemoveAll("/src/apps" + path)
+	err = os.RemoveAll(path)
 	if err != nil {
 		return err
 	}
