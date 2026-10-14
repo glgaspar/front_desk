@@ -607,8 +607,8 @@ func AddCloudflareHostname(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 		}
 		dir = app.Dir
-		if data.Port == "" && app.CloudflarePort != nil {
-			data.Port = *app.CloudflarePort
+		if data.Port == "" {
+			data.Port = app.ForwardPort()
 		}
 	}
 

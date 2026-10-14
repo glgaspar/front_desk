@@ -29,6 +29,7 @@ type App struct {
 	Created        time.Time `json:"created"`
 	Image          string    `json:"image"`
 	ImageRef       string    `json:"imageRef"`
+	Port           *string   `json:"port"`
 	CloudflarePort *string   `json:"cloudflarePort"`
 	Name           string    `json:"name"`
 	Url            string    `json:"url"`
@@ -141,18 +142,13 @@ func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool
 		return err
 	}
 
-	container, err := a.GetContainer()
-	if err != nil {
-		return err
-	}
-
 	cloudflareEnabled, err := integrations.CheckFor("cloudflare")
 	if err != nil {
 		return err
 	}
 
 	if cloudflareEnabled && tunnel {
-		if (*container).Config.Labels.Port == nil {
+		if a.ForwardPort() == "" {
 			return SendBuildLog(appName, "App was created but no port provided for tunnel.")
 		}
 
@@ -161,7 +157,7 @@ func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool
 			return err
 		}
 
-		err = cloudflare.AddHostname(cloudflare.HostFromUrl(a.Url), *container.Config.Labels.Port, a.Dir)
+		err = cloudflare.AddHostname(cloudflare.HostFromUrl(a.Url), a.ForwardPort(), a.Dir)
 		if err != nil {
 			return err
 		}
@@ -172,6 +168,17 @@ func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool
 	}
 
 	return nil
+}
+
+// front-desk.port is the one to use, cloudflare-port is still here so old apps keep working
+func (a *App) ForwardPort() string {
+	if a.Port != nil && *a.Port != "" {
+		return *a.Port
+	}
+	if a.CloudflarePort != nil {
+		return *a.CloudflarePort
+	}
+	return ""
 }
 
 func (a *App) GetPath() (string, error) {

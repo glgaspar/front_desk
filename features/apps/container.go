@@ -31,7 +31,8 @@ type Container struct {
 			Url  string  `json:"front-desk.url"`
 			Dir  string  `json:"front-desk.dir"`
 			Logo *string `json:"front-desk.logo"`
-			Port *string `json:"front-desk.cloudflare-port"`
+			Port           *string `json:"front-desk.port"`
+			CloudflarePort *string `json:"front-desk.cloudflare-port"`
 		} `json:"Labels"`
 	} `json:"Config"`
 }
@@ -47,7 +48,8 @@ func (c *Container) Translate() App {
 		Created:        c.Created,
 		Image:          c.Image,
 		ImageRef:       c.Config.Image,
-		CloudflarePort: c.Config.Labels.Port,
+		Port:           c.Config.Labels.Port,
+		CloudflarePort: c.Config.Labels.CloudflarePort,
 		Name:           c.Config.Labels.Name,
 		Url:            c.Config.Labels.Url,
 		Dir:            c.Config.Labels.Dir,
@@ -138,11 +140,7 @@ func (c *Container) RemoveContainer() (string, error) {
 	warning := ""
 	cloudflareEnabled, _ := integrations.CheckFor("cloudflare")
 	if cloudflareEnabled {
-		port := ""
-		if app.CloudflarePort != nil {
-			port = *app.CloudflarePort
-		}
-		err = cloudflare.RemoveForApp(app.Dir, cloudflare.HostFromUrl(app.Url), port)
+		err = cloudflare.RemoveForApp(app.Dir, cloudflare.HostFromUrl(app.Url), app.ForwardPort())
 		if err != nil {
 			fmt.Println("Error:", err)
 			warning = "Could not clean cloudflare: " + err.Error()

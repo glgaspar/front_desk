@@ -51,7 +51,10 @@ func ParseComposeLabels(compose string) (ComposeLabels, error) {
 
 		labels.Name = values["front-desk.name"]
 		labels.Dir = values["front-desk.dir"]
-		labels.Port = values["front-desk.cloudflare-port"]
+		labels.Port = values["front-desk.port"]
+		if labels.Port == "" {
+			labels.Port = values["front-desk.cloudflare-port"]
+		}
 		break
 	}
 

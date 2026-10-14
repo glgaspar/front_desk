@@ -59,3 +59,22 @@ func TestParseComposeLabels_Bad(t *testing.T) {
 		}
 	}
 }
+
+func TestParseComposeLabels_Port(t *testing.T) {
+	compose := `
+services:
+  web:
+    labels:
+      front-desk.name: x
+      front-desk.dir: /x
+      front-desk.port: "3000"
+      front-desk.cloudflare-port: "8080"
+`
+	labels, err := ParseComposeLabels(compose)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if labels.Port != "3000" {
+		t.Errorf("front-desk.port should win, got %q", labels.Port)
+	}
+}
