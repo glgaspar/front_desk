@@ -22,7 +22,6 @@ func (c *Config) SetTransmission() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	tran, err := conn.Begin()
 	if err != nil {
@@ -61,7 +60,6 @@ func (t *Transmission) Connect() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	query := `
 	SELECT url, username, password, port, protocol

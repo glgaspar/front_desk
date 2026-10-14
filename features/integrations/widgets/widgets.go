@@ -17,7 +17,6 @@ func (w *Widget) CreateWidget() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	query := `
 	INSERT INTO frontdesk.widgets (name) VALUES ($1)
@@ -40,7 +39,6 @@ func (w *Widget) GetList(homeOnly bool) ([]Widget, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
 	query := `
 	SELECT 
@@ -63,6 +61,7 @@ func (w *Widget) GetList(homeOnly bool) ([]Widget, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	var widgets []Widget
 	for rows.Next() {
@@ -82,7 +81,6 @@ func (w *Widget) Toggle(toggle string) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	query := `
 	UPDATE frontdesk.widgets

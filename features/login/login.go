@@ -18,7 +18,6 @@ func CreateDatabase() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	var queries []string
 	file, err := os.ReadFile("/src/connection/db.sql")
@@ -51,7 +50,6 @@ func LoginValidator(cookie string) (bool, error) {
 	if err != nil {
 		return valid, err
 	}
-	defer conn.Close()
 
 	query := `
 	select 
@@ -65,6 +63,7 @@ func LoginValidator(cookie string) (bool, error) {
 	if err != nil {
 		return valid, err
 	}
+	defer res.Close()
 
 	for res.Next() {
 		res.Scan(&valid)
@@ -79,7 +78,6 @@ func RefreshCookie(cookie *http.Cookie) (*http.Cookie, error) {
 	if err != nil {
 		return cookie, err
 	}
-	defer conn.Close()
 
 	query := `
 	update frontdesk.activesessions
@@ -93,6 +91,7 @@ func RefreshCookie(cookie *http.Cookie) (*http.Cookie, error) {
 	if err != nil {
 		return cookie, err
 	}
+	defer res.Close()
 
 	for res.Next() {
 		res.Scan(&(*cookie).Value, &(*cookie).Expires)
@@ -135,7 +134,6 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
 	query := `
 	select id
@@ -147,6 +145,7 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer res.Close()
 
 	for res.Next() {
 		res.Scan(&u.Id)
@@ -211,7 +210,6 @@ func (u *LoginUser) Create() (LoginUser, error) {
 	if err != nil {
 		return *u, err
 	}
-	defer conn.Close()
 
 	query := `
 	insert into frontdesk.users (username, password)
@@ -222,6 +220,7 @@ func (u *LoginUser) Create() (LoginUser, error) {
 	if err != nil {
 		return *u, err
 	}
+	defer res.Close()
 
 	for res.Next() {
 		res.Scan(&u.Id, &u.UserName)
@@ -242,7 +241,6 @@ func (u *LoginUser) CheckForUsers() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	var count int
 	query := `
@@ -252,6 +250,7 @@ func (u *LoginUser) CheckForUsers() error {
 	if err != nil {
 		return err
 	}
+	defer res.Close()
 
 	for res.Next() {
 		res.Scan(&count)
@@ -279,7 +278,6 @@ func (u *LoginUser) Logout(cookie *http.Cookie) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	sessionClearQuery := `
 	delete from frontdesk.activesessions

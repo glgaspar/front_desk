@@ -16,7 +16,6 @@ func (c *Config) SetPihole() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	tran, err := conn.Begin()
 	if err != nil {
@@ -59,7 +58,6 @@ func (p *Pihole) Auth() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	query := `
 	select password, url
@@ -70,6 +68,7 @@ func (p *Pihole) Auth() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		rows.Scan(&p.Password, &p.Url)

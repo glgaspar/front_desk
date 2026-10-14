@@ -9,11 +9,23 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	_ "github.com/lib/pq"
 )
 
+var db *sql.DB
+var dbLock sync.Mutex
+
+// one pool for the whole app, opening a new one every call was a dumb idea
 func Db() (*sql.DB, error) {
+	dbLock.Lock()
+	defer dbLock.Unlock()
+	if db != nil {
+		return db, nil
+	}
+
 	HOST := os.Getenv("PG_HOST")
 	PORT := os.Getenv("PG_PORT")
 	USER := os.Getenv("PG_USER")
@@ -29,8 +41,17 @@ func Db() (*sql.DB, error) {
 		return nil, err
 	}
 	err = conn.Ping()
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
 
-	return conn, err
+	conn.SetMaxOpenConns(10)
+	conn.SetMaxIdleConns(5)
+	conn.SetConnMaxIdleTime(5 * time.Minute)
+
+	db = conn
+	return db, nil
 }
 
 func Api(method string, url string, headers map[string]string, data any) (*[]byte, error) {

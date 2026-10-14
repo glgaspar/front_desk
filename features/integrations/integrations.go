@@ -11,7 +11,6 @@ func SetAvailable(name string) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 	query := `
 	update frontdesk.integrations_available
 	set enabled = TRUE
@@ -29,7 +28,6 @@ func SetUnavailable(name string) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 	query := `
 	update frontdesk.integrations_available
 	set enabled = FALSE
@@ -48,7 +46,6 @@ func CheckFor(integration string) (bool, error) {
 	if err != nil {
 		return enabled, err
 	}
-	defer conn.Close()
 
 	query := `
 	select enabled
@@ -60,6 +57,7 @@ func CheckFor(integration string) (bool, error) {
 	if err != nil {
 		return enabled, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		rows.Scan(&enabled)
@@ -73,7 +71,6 @@ func CheckAll() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 	query := `
 	select name
 	from frontdesk.integrations_available;
@@ -83,6 +80,7 @@ func CheckAll() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	var integrations []string
 	for rows.Next() {

@@ -39,7 +39,6 @@ func (c *Config) SetCloudflare() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	tran, err := conn.Begin()
 	if err != nil {
@@ -73,7 +72,6 @@ func (c *Config) CheckForCloudflare() error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	query := `
 	select enabled
@@ -85,6 +83,7 @@ func (c *Config) CheckForCloudflare() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		rows.Scan(&c.Enabled)
@@ -103,7 +102,6 @@ func (c *Config) CreateTunnel(hostname string, localPort string) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	query := `
 	select accountId, tunnelId, cloudflareAPIToken, localAddress, zoneId
@@ -114,6 +112,7 @@ func (c *Config) CreateTunnel(hostname string, localPort string) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		rows.Scan(&accountId, &tunnelId, &token, &localAddress, &zoneId)
