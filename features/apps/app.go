@@ -101,7 +101,7 @@ func sendBuild(appName string, message string, done bool) error {
 	return messenger.SendMessage("build-logs", string(b))
 }
 
-func (a *App) CreateApp(compose Compose, appName string, dir string) error {
+func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool) error {
 	path, err := AppPath(dir)
 	if err != nil {
 		return err
@@ -149,7 +149,7 @@ func (a *App) CreateApp(compose Compose, appName string, dir string) error {
 		return err
 	}
 
-	if cloudflareEnabled {
+	if cloudflareEnabled && tunnel {
 		if (*container).Config.Labels.Port == nil {
 			return SendBuildLog(appName, "App was created but no port provided for tunnel.")
 		}

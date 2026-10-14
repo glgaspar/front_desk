@@ -8,6 +8,7 @@ require (
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/lib/pq v1.10.9
 	github.com/shirou/gopsutil/v4 v4.25.8
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

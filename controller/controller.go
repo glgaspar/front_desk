@@ -1,12 +1,12 @@
 package controller
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -190,6 +190,8 @@ func ListenToBuild(c echo.Context) error {
 					fmt.Fprintf(c.Response(), "data: %s\n\n", logMsg.Log)
 					c.Response().Flush()
 					if logMsg.Done {
+						c.Response().Write([]byte("data: [stream closed]\n\n"))
+						c.Response().Flush()
 						return nil
 					}
 				}
@@ -277,36 +279,14 @@ func CreateApp(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
 
-	var dir string
-	var appName string
-
-	reader := strings.NewReader(data.Compose)
-
-	scanner := bufio.NewScanner(reader)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, "front-desk.dir:") {
-			parts := strings.Split(line, ":")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid front-desk.dir label")
-			}
-			dir = strings.TrimSpace(parts[1])
-			if dir[0] != '/' {
-				dir = "/" + dir
-			}
-		}
-		if strings.Contains(line, "front-desk.name:") {
-			parts := strings.Split(line, ":")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid front-desk.name label")
-			}
-			appName = strings.TrimSpace(parts[1])
-		}
+	labels, err := apps.ParseComposeLabels(data.Compose)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
 	}
 
-	if dirInfo, err := os.Stat("/src/apps" + dir); err == nil && dirInfo.IsDir() {
-		fileInfo, err := os.Stat("/src/apps" + dir + "/docker-compose.yml")
+	path, _ := apps.AppPath(labels.Dir)
+	if dirInfo, err := os.Stat(path); err == nil && dirInfo.IsDir() {
+		fileInfo, err := os.Stat(filepath.Join(path, "docker-compose.yml"))
 		if err == nil {
 			if fileInfo.Size() > 1 {
 				return c.JSON(http.StatusConflict, Response{Status: false, Message: "An app in this directory already exists."})
@@ -314,36 +294,40 @@ func CreateApp(c echo.Context) error {
 		}
 	}
 
-	activeBuilds.Store(appName, time.Now().UnixNano())
-	app := apps.App{}
-	go func() {
-		defer activeBuilds.Delete(appName)
-		err = app.CreateApp(data, appName, dir)
-
-		var finalMsg string
-		if err != nil {
-			finalMsg = err.Error()
-		} else {
-			finalMsg = "All operations finished."
-		}
-
-		b, _ := json.Marshal(map[string]interface{}{
-			"app":  appName,
-			"log":  finalMsg,
-			"time": time.Now().UnixNano(),
-			"done": true,
-		})
-		messenger.SendMessage("build-logs", string(b))
-
-	}()
-
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	tunnel := data.Tunnel != nil && *data.Tunnel
+	started := startBuild(labels.Name, func() error {
+		app := apps.App{}
+		return app.CreateApp(data, labels.Name, labels.Dir, tunnel)
+	})
+	if !started {
+		return c.JSON(http.StatusConflict, Response{Status: false, Message: "There is already a build running for " + labels.Name})
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: struct {
 		Topic string `json:"topic"`
-	}{Topic: appName}})
+	}{Topic: labels.Name}})
+}
+
+// runs the build in the background and tells whoever is listening when its done
+func startBuild(appName string, build func() error) bool {
+	_, running := activeBuilds.LoadOrStore(appName, time.Now().UnixNano())
+	if running {
+		return false
+	}
+
+	go func() {
+		defer activeBuilds.Delete(appName)
+		err := build()
+
+		finalMsg := "All operations finished."
+		if err != nil {
+			finalMsg = err.Error()
+		}
+
+		apps.SendBuildDone(appName, finalMsg)
+	}()
+
+	return true
 }
 
 func RemoveContainer(c echo.Context) error {
