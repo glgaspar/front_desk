@@ -73,28 +73,42 @@ func Login(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, Response{Status: false, Message: "Login failed. Check your credentials"})
 	}
 
-	cookie := http.Cookie{
-		Name:    newSession.Name,
-		Domain:  newSession.Domain,
-		Value:   newSession.Value,
-		Expires: newSession.Expires,
-	}
-
-	c.SetCookie(&cookie)
+	c.SetCookie(sessionCookie(newSession.Value, newSession.Expires))
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Login successful"})
 }
 
-func LoginValidator(c *http.Cookie) (bool, error) {
+func LoginValidator(c *http.Cookie) (bool, time.Time, error) {
 	cookie := c.Value
 	if cookie == "" {
-		return false, nil
+		return false, time.Time{}, nil
 	}
 
-	valid, err := login.LoginValidator(cookie)
-	if err != nil {
-		return false, err
+	return login.LoginValidator(cookie)
+}
+
+// COOKIE_SECURE=true if you are behind https (you should be)
+// COOKIE_SAMESITE=none if the front and the api are on different domains
+func sessionCookie(value string, expires time.Time) *http.Cookie {
+	cookie := &http.Cookie{
+		Name:     "front_desk_awesome_cookie",
+		Value:    value,
+		Domain:   os.Getenv("DOMAIN_NAME"),
+		Path:     "/",
+		Expires:  expires,
+		HttpOnly: true,
+		Secure:   os.Getenv("COOKIE_SECURE") == "true",
+		SameSite: http.SameSiteLaxMode,
 	}
-	return valid, nil
+
+	switch strings.ToLower(os.Getenv("COOKIE_SAMESITE")) {
+	case "strict":
+		cookie.SameSite = http.SameSiteStrictMode
+	case "none":
+		cookie.SameSite = http.SameSiteNoneMode
+		cookie.Secure = true
+	}
+
+	return cookie
 }
 
 func Logout(c echo.Context) error {
@@ -109,20 +123,19 @@ func Logout(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	cookie.Value = ""
+	cookie = sessionCookie("", time.Unix(0, 0))
 	cookie.MaxAge = -1
-	cookie.Path = "/"
 	c.SetCookie(cookie)
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Logout successful"})
 }
 
-func RefreshCookie(c *http.Cookie) (*http.Cookie, error) {
-	valid, err := login.RefreshCookie(c)
+func RefreshSession(c *http.Cookie) (*http.Cookie, error) {
+	expire, err := login.RefreshSession(c.Value)
 	if err != nil {
-		return c, err
+		return nil, err
 	}
-	return valid, nil
+	return sessionCookie(c.Value, expire), nil
 }
 
 func GetApps(c echo.Context) error {

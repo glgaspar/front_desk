@@ -1,16 +1,19 @@
 package login
 
 import (
-	"errors"
+	"crypto/subtle"
+	"database/sql"
 	"hash/fnv"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/glgaspar/front_desk/connection"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func CreateDatabase() error {
@@ -44,60 +47,71 @@ func CreateDatabase() error {
 
 }
 
-func LoginValidator(cookie string) (bool, error) {
-	var valid bool
+func LoginValidator(cookie string) (bool, time.Time, error) {
+	var expire time.Time
 	conn, err := connection.Db()
 	if err != nil {
-		return valid, err
+		return false, expire, err
 	}
 
 	query := `
-	select 
-	coalesce(case
-		when count(userId) = 0 then false
-		else true 
-	end,false) 
+	select expire
 	from frontdesk.activesessions
 	where token = $1 and expire >= now() `
-	res, err := conn.Query(query, cookie)
+	err = conn.QueryRow(query, cookie).Scan(&expire)
+	if err == sql.ErrNoRows {
+		return false, expire, nil
+	}
 	if err != nil {
-		return valid, err
-	}
-	defer res.Close()
-
-	for res.Next() {
-		res.Scan(&valid)
+		return false, expire, err
 	}
 
-	return valid, nil
+	return true, expire, nil
 }
 
-func RefreshCookie(cookie *http.Cookie) (*http.Cookie, error) {
-	cookie.Expires = cookie.Expires.Add(24 * time.Hour)
+// pushes the session another 24h from now
+func RefreshSession(token string) (time.Time, error) {
+	var expire time.Time
 	conn, err := connection.Db()
 	if err != nil {
-		return cookie, err
+		return expire, err
 	}
 
 	query := `
 	update frontdesk.activesessions
-		SET token = $1,
-		expire = $2
+		SET expire = $2
 	where
 		token = $1
-	RETURNING token, expire`
+	RETURNING expire`
 
-	res, err := conn.Query(query, (*cookie).Value, (*cookie).Expires)
+	err = conn.QueryRow(query, token, time.Now().Add(24*time.Hour)).Scan(&expire)
 	if err != nil {
-		return cookie, err
-	}
-	defer res.Close()
-
-	for res.Next() {
-		res.Scan(&(*cookie).Value, &(*cookie).Expires)
+		return expire, err
 	}
 
-	return cookie, nil
+	return expire, nil
+}
+
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
+
+// returns if it matches and if it is one of the old fnv hashes that need to become bcrypt
+func verifyPassword(stored string, password string) (bool, bool) {
+	if strings.HasPrefix(stored, "$2") {
+		return bcrypt.CompareHashAndPassword([]byte(stored), []byte(password)) == nil, false
+	}
+
+	// fnv was a terrible idea, but some people already have users with it
+	hashPass := fnv.New32a()
+	hashPass.Write([]byte(password))
+	legacy := strconv.FormatUint(uint64(hashPass.Sum32()), 10)
+	ok := subtle.ConstantTimeCompare([]byte(stored), []byte(legacy)) == 1
+	return ok, ok
 }
 
 type LoginUser struct {
@@ -122,43 +136,43 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 		Expires: time.Now().Add(time.Hour * 24),
 	}
 
-	userCount := 0
-	hashPass := fnv.New32a()
-
-	_, err := hashPass.Write([]byte(u.Password))
-	if err != nil {
-		return nil, err
-	}
-
 	conn, err := connection.Db()
 	if err != nil {
 		return nil, err
 	}
 
 	query := `
-	select id
+	select id, password
 	from frontdesk.users
 	where
-		username = $1
-		and password = $2 `
-	res, err := conn.Query(query, u.UserName, hashPass.Sum32())
+		username = $1 `
+	res, err := conn.Query(query, u.UserName)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Close()
 
+	found := false
+	needsRehash := false
 	for res.Next() {
-		res.Scan(&u.Id)
-		userCount++
+		var id int
+		var stored string
+		err = res.Scan(&id, &stored)
+		if err != nil {
+			return nil, err
+		}
+		ok, rehash := verifyPassword(stored, u.Password)
+		if ok {
+			u.Id = id
+			found = true
+			needsRehash = rehash
+			break
+		}
 	}
 
-	if userCount == 0 {
+	if !found {
 		session.Valid = false
 		return &session, nil
-	}
-
-	if userCount > 1 {
-		return nil, errors.New("somehow you got multiple users with matching credentials")
 	}
 
 	sessionClearQuery := `
@@ -188,6 +202,19 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 		return nil, err
 	}
 
+	if needsRehash {
+		newHash, err := hashPassword(u.Password)
+		if err != nil {
+			tran.Rollback()
+			return nil, err
+		}
+		_, err = tran.Exec(`update frontdesk.users set password = $1 where id = $2`, newHash, u.Id)
+		if err != nil {
+			tran.Rollback()
+			return nil, err
+		}
+	}
+
 	err = tran.Commit()
 	if err != nil {
 		tran.Rollback()
@@ -200,8 +227,7 @@ func (u *LoginUser) Login() (*SessionCookie, error) {
 }
 
 func (u *LoginUser) Create() (LoginUser, error) {
-	hashPass := fnv.New32a()
-	_, err := hashPass.Write([]byte(u.Password))
+	hashPass, err := hashPassword(u.Password)
 	if err != nil {
 		return *u, err
 	}
@@ -216,14 +242,9 @@ func (u *LoginUser) Create() (LoginUser, error) {
 	values ($1,$2)
 	RETURNING id, username`
 
-	res, err := conn.Query(query, u.UserName, hashPass.Sum32())
+	err = conn.QueryRow(query, u.UserName, hashPass).Scan(&u.Id, &u.UserName)
 	if err != nil {
 		return *u, err
-	}
-	defer res.Close()
-
-	for res.Next() {
-		res.Scan(&u.Id, &u.UserName)
 	}
 
 	if os.Getenv("FIRST_ACCESS") == "YES" {

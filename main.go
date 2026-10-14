@@ -38,7 +38,7 @@ func authentication(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "You're not logged in"})
 		}
 
-		valid, err := controller.LoginValidator(cookie)
+		valid, expire, err := controller.LoginValidator(cookie)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "Something went wrong: "+ err.Error()})
 		}
@@ -47,8 +47,9 @@ func authentication(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		
 		// update cookie to extend session if expiring in lass than 1 hour
-		if cookie.Expires.Sub(cookie.Expires.Add(-1 * time.Hour)).Hours() < 1 {
-			newCookie, err := controller.RefreshCookie(cookie)
+		// the browser never sends the expire date back so we check the one in the db
+		if time.Until(expire) < time.Hour {
+			newCookie, err := controller.RefreshSession(cookie)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "Something went wrong: "+ err.Error()})
 			}
