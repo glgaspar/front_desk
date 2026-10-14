@@ -19,6 +19,7 @@ import (
 	"github.com/glgaspar/front_desk/features/integrations/transmission"
 	"github.com/glgaspar/front_desk/features/integrations/widgets"
 	"github.com/glgaspar/front_desk/features/login"
+	"github.com/glgaspar/front_desk/features/monitoring"
 	"github.com/glgaspar/front_desk/features/system"
 	"github.com/glgaspar/front_desk/features/utils/messenger"
 	"github.com/labstack/echo/v4"
@@ -804,4 +805,127 @@ func ToggleWidget(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: widget})
+}
+
+func GetUptime(c echo.Context) error {
+	uptime, err := monitoring.GetUptime(c.QueryParam("range"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: uptime})
+}
+
+func GetUptimeHistory(c echo.Context) error {
+	app := c.QueryParam("app")
+	if app == "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "app must be sent"})
+	}
+
+	history, err := monitoring.GetUptimeHistory(app, c.QueryParam("range"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: history})
+}
+
+func GetMetricsHistory(c echo.Context) error {
+	metrics, err := monitoring.GetMetricsHistory(c.QueryParam("range"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: metrics})
+}
+
+func GetNotifications(c echo.Context) error {
+	channels, err := monitoring.ListChannels()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	masked := []monitoring.Channel{}
+	for _, ch := range channels {
+		masked = append(masked, ch.Masked())
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d channels found", len(masked)), Data: masked})
+}
+
+func readChannel(c echo.Context) (*monitoring.Channel, error) {
+	var data monitoring.Channel
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Request().Body.Close()
+
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func CreateNotification(c echo.Context) error {
+	data, err := readChannel(c)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = data.Create()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Channel created", Data: data.Masked()})
+}
+
+func UpdateNotification(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	data, err := readChannel(c)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	data.Id = id
+
+	err = data.Update()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Channel updated", Data: data.Masked()})
+}
+
+func DeleteNotification(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	err = monitoring.DeleteChannel(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Channel removed"})
+}
+
+func TestNotification(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	err = monitoring.TestChannel(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Sent, go check it"})
 }

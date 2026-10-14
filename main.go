@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"github.com/glgaspar/front_desk/controller"
 	"github.com/glgaspar/front_desk/features"
 	"github.com/glgaspar/front_desk/features/integrations"
+	"github.com/glgaspar/front_desk/features/monitoring"
 	"github.com/glgaspar/front_desk/features/utils/messenger"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -103,6 +105,9 @@ func main() {
 	log.Println("ensuring build-logs topic exists... ")
 	_ = messenger.CreateTopic("build-logs")
 
+	log.Println("starting monitoring... ")
+	monitoring.Start(context.Background())
+
 	log.Printf("%sall checks done%s", greenBg, reset)
 	log.Println("starting server")
 
@@ -148,6 +153,16 @@ func main() {
 	e.GET("/apps/stats", controller.GetAppStats)
 
 	e.GET("/system/usage", controller.GetSystemUsage)
+
+	e.GET("/monitoring/uptime", controller.GetUptime)
+	e.GET("/monitoring/uptime/history", controller.GetUptimeHistory)
+	e.GET("/monitoring/metrics", controller.GetMetricsHistory)
+
+	e.GET("/notifications", controller.GetNotifications)
+	e.POST("/notifications", controller.CreateNotification)
+	e.PUT("/notifications/:id", controller.UpdateNotification)
+	e.DELETE("/notifications/:id", controller.DeleteNotification)
+	e.POST("/notifications/:id/test", controller.TestNotification)
 	
 	e.POST("/widgets", controller.CreateWidget)
 	e.GET("/widgets", controller.GetWidgets)

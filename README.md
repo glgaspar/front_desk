@@ -83,12 +83,22 @@ The apps folder is mounted with the **same path** on the host and inside the con
 *   `PUT /apps/toggleOnOff/:id/:toggle` - Start or stop a specific container.
 *   `GET /apps/logs/:id` - Stream live container logs.
 *   `GET /apps/waitingBuilds/:app` - Listen to live build logs via SSE.
+*   `PUT /apps/restart/:id` - Restart a container.
+*   `POST /apps/update/:id` - Pull new images and recreate the app (follow it like a build).
+*   `GET /apps/updates` - Check every app for a newer image (`?force=true` skips the cache).
+*   `GET /apps/stats` - CPU and memory per container.
 
 ### System Monitoring
 *   `GET /system/usage` - Fetch CPU, memory, and top process usage statistics from the host machine.
+*   `GET /monitoring/uptime?range=24h` - Uptime per app (`1h`, `24h`, `7d`, `30d`).
+*   `GET /monitoring/uptime/history?app=<key>&range=` - Uptime and latency over time for one app.
+*   `GET /monitoring/metrics?range=` - Host CPU, memory and disk over time.
+*   `GET|POST /notifications`, `PUT|DELETE /notifications/:id`, `POST /notifications/:id/test` - Where to yell when something goes down (ntfy, Discord, Telegram or a webhook).
 
 ### Integrations
 *   `GET /cloudflare/config` / `POST /cloudflare/config` - Manage Cloudflare tunnels.
+*   `GET /cloudflare/routes`, `GET /cloudflare/dns` - What is going through the tunnel.
+*   `POST /cloudflare/hostname`, `DELETE /cloudflare/hostname/:hostname?dns=true` - Add or remove a public hostname.
 *   `GET /pihole/history` - Retrieve Pi-hole query history.
 *   `GET /transmission/torrents` - List active torrents from Transmission.
 

@@ -106,3 +106,53 @@ CREATE TABLE IF NOT EXISTS frontdesk.cloudflare_routes (
     created_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT cloudflare_routes_pkey PRIMARY KEY (hostname)
 );
+----
+CREATE TABLE IF NOT EXISTS frontdesk.health_checks (
+    id bigserial NOT NULL,
+    app_key varchar(255) NOT NULL,
+    app_name varchar(255) NULL,
+    container_status varchar(32) NULL,
+    http_status int4 NULL,
+    latency_ms int4 NULL,
+    up bool NOT NULL,
+    error text NULL,
+    checked_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT health_checks_pkey PRIMARY KEY (id)
+);
+----
+CREATE INDEX IF NOT EXISTS health_checks_app_time_idx ON frontdesk.health_checks (app_key, checked_at DESC);
+----
+CREATE INDEX IF NOT EXISTS health_checks_time_idx ON frontdesk.health_checks (checked_at);
+----
+CREATE TABLE IF NOT EXISTS frontdesk.monitor_state (
+    app_key varchar(255) NOT NULL,
+    up bool NOT NULL,
+    consecutive_failures int4 NOT NULL DEFAULT 0,
+    changed_at timestamptz NOT NULL DEFAULT now(),
+    last_checked_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT monitor_state_pkey PRIMARY KEY (app_key)
+);
+----
+CREATE TABLE IF NOT EXISTS frontdesk.host_metrics (
+    id bigserial NOT NULL,
+    cpu_percent real NOT NULL,
+    mem_percent real NOT NULL,
+    disk_percent real NULL,
+    load1 real NULL,
+    sampled_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT host_metrics_pkey PRIMARY KEY (id)
+);
+----
+CREATE INDEX IF NOT EXISTS host_metrics_time_idx ON frontdesk.host_metrics (sampled_at DESC);
+----
+CREATE TABLE IF NOT EXISTS frontdesk.notification_channels (
+    id serial4 NOT NULL,
+    name varchar(100) NOT NULL,
+    type varchar(20) NOT NULL,
+    config jsonb NOT NULL DEFAULT '{}'::jsonb,
+    events text[] NOT NULL DEFAULT ARRAY['down','up'],
+    enabled bool NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT notification_channels_pkey PRIMARY KEY (id),
+    CONSTRAINT notification_channels_type_chk CHECK (type IN ('ntfy','discord','telegram','webhook'))
+);
