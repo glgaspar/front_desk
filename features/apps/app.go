@@ -15,6 +15,7 @@ import (
 	"github.com/glgaspar/front_desk/features/utils/messenger"
 
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
+	"github.com/glgaspar/front_desk/features/integrations/npm"
 )
 
 type BuildLogMsg struct {
@@ -104,7 +105,7 @@ func sendBuild(appName string, message string, done bool) error {
 	return messenger.SendMessage("build-logs", string(b))
 }
 
-func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool) error {
+func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool, proxy bool) error {
 	path, err := AppPath(dir)
 	if err != nil {
 		return err
@@ -147,11 +148,9 @@ func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool
 		return err
 	}
 
-	if cloudflareEnabled && tunnel {
-		if a.ForwardPort() == "" {
-			return SendBuildLog(appName, "App was created but no port provided for tunnel.")
-		}
-
+	if cloudflareEnabled && tunnel && a.ForwardPort() == "" {
+		SendBuildLog(appName, "App was created but no port provided for tunnel.")
+	} else if cloudflareEnabled && tunnel {
 		err = SendBuildLog(appName, "Creating Cloudflare tunnel.")
 		if err != nil {
 			return err
@@ -162,6 +161,29 @@ func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool
 			return err
 		}
 		err = SendBuildLog(appName, "Tunnel Cloudflare created.")
+		if err != nil {
+			return err
+		}
+	}
+
+	npmEnabled, err := integrations.CheckFor("nginxproxymanager")
+	if err != nil {
+		return err
+	}
+
+	if npmEnabled && proxy && a.ForwardPort() == "" {
+		SendBuildLog(appName, "App was created but no port provided for the proxy host.")
+	} else if npmEnabled && proxy {
+		err = SendBuildLog(appName, "Creating Nginx Proxy Manager host.")
+		if err != nil {
+			return err
+		}
+
+		_, err = npm.AddProxyHost(cloudflare.HostFromUrl(a.Url), a.ForwardPort(), a.Dir, npm.DefaultCertificate())
+		if err != nil {
+			return err
+		}
+		err = SendBuildLog(appName, "Proxy host created.")
 		if err != nil {
 			return err
 		}

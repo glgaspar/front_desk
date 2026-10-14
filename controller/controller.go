@@ -310,9 +310,10 @@ func CreateApp(c echo.Context) error {
 	}
 
 	tunnel := data.Tunnel != nil && *data.Tunnel
+	proxy := data.Proxy != nil && *data.Proxy
 	started := startBuild(labels.Name, func() error {
 		app := apps.App{}
-		return app.CreateApp(data, labels.Name, labels.Dir, tunnel)
+		return app.CreateApp(data, labels.Name, labels.Dir, tunnel, proxy)
 	})
 	if !started {
 		return c.JSON(http.StatusConflict, Response{Status: false, Message: "There is already a build running for " + labels.Name})

@@ -9,6 +9,7 @@ import (
 
 	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
+	"github.com/glgaspar/front_desk/features/integrations/npm"
 )
 
 type Container struct {
@@ -40,6 +41,7 @@ type Container struct {
 type Compose struct {
 	Compose string `json:"compose"`
 	Tunnel  *bool  `json:"tunnel"`
+	Proxy   *bool  `json:"proxy"`
 }
 
 func (c *Container) Translate() App {
@@ -144,6 +146,18 @@ func (c *Container) RemoveContainer() (string, error) {
 		if err != nil {
 			fmt.Println("Error:", err)
 			warning = "Could not clean cloudflare: " + err.Error()
+		}
+	}
+
+	npmEnabled, _ := integrations.CheckFor("nginxproxymanager")
+	if npmEnabled {
+		err = npm.RemoveForApp(app.Dir, cloudflare.HostFromUrl(app.Url), app.ForwardPort())
+		if err != nil {
+			fmt.Println("Error:", err)
+			if warning != "" {
+				warning += ". "
+			}
+			warning += "Could not clean nginx proxy manager: " + err.Error()
 		}
 	}
 

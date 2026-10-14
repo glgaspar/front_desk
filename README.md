@@ -70,6 +70,19 @@ docker compose up -d --build
 
 The apps folder is mounted with the **same path** on the host and inside the container (`/mnt/apps:/mnt/apps`). Docker compose resolves relative volumes (`./data`) from the project folder and the docker daemon reads that path on the host, so if the paths are different your app volumes end up in the wrong place. If you change it, change `APPS_DIR` too.
 
+## App labels
+
+Front Desk only cares about containers with these labels:
+
+```yaml
+labels:
+  front-desk.name: Jellyfin
+  front-desk.url: https://jellyfin.yourdomain.com
+  front-desk.dir: /jellyfin
+  front-desk.logo: https://example.com/logo.png
+  front-desk.port: 8096   # used by cloudflare and nginx proxy manager (front-desk.cloudflare-port still works)
+```
+
 ## Key API Endpoints
 
 ### Authentication
@@ -99,6 +112,9 @@ The apps folder is mounted with the **same path** on the host and inside the con
 *   `GET /cloudflare/config` / `POST /cloudflare/config` - Manage Cloudflare tunnels.
 *   `GET /cloudflare/routes`, `GET /cloudflare/dns` - What is going through the tunnel.
 *   `POST /cloudflare/hostname`, `DELETE /cloudflare/hostname/:hostname?dns=true` - Add or remove a public hostname.
+*   `GET /npm/config` / `POST /npm/config` - Connect to Nginx Proxy Manager (url, login, the host it should forward to and a default certificate).
+*   `GET /npm/hosts`, `POST /npm/hosts`, `DELETE /npm/hosts/:id` - Proxy hosts for your apps.
+*   `GET /npm/certificates`, `PUT /npm/hosts/:id/certificate` - Pick which existing certificate goes on each host. Front Desk does not request certificates, do that on NPM.
 *   `GET /pihole/history` - Retrieve Pi-hole query history.
 *   `GET /transmission/torrents` - List active torrents from Transmission.
 
