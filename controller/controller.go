@@ -425,12 +425,16 @@ func RemoveContainer(c echo.Context) error {
 	}
 
 	container := apps.Container{ID: id}
-	err := container.RemoveContainer()
+	warning, err := container.RemoveContainer()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+	message := "Operation successful"
+	if warning != "" {
+		message += ". " + warning
+	}
+	return c.JSON(http.StatusOK, Response{Status: true, Message: message})
 }
 
 func GetLogs(c echo.Context) error {
@@ -491,7 +495,146 @@ func GetCloudflare(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, Response{Status: enabled, Message: "Operation successful"})
+	if !enabled {
+		return c.JSON(http.StatusOK, Response{Status: false, Message: "Cloudflare not configured"})
+	}
+
+	config, err := cloudflare.PublicConfig()
+	if err != nil {
+		return c.JSON(http.StatusOK, Response{Status: enabled, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: enabled, Message: "Operation successful", Data: config})
+}
+
+type CloudflareRoute struct {
+	Hostname  string  `json:"hostname"`
+	Service   string  `json:"service"`
+	AppId     *string `json:"appId"`
+	AppName   *string `json:"appName"`
+	Managed   bool    `json:"managed"`
+	DnsRecord bool    `json:"dnsRecord"`
+}
+
+func GetCloudflareRoutes(c echo.Context) error {
+	ingress, err := cloudflare.ListIngress()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	records, err := cloudflare.ListDNSRecords()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	hasRecord := map[string]bool{}
+	for _, r := range records {
+		hasRecord[r.Name] = true
+	}
+
+	saved, err := cloudflare.ListSavedRoutes()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	savedDir := map[string]string{}
+	for _, r := range saved {
+		savedDir[r.Hostname] = r.AppDir
+	}
+
+	appList, err := new(apps.App).GetList()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	routes := []CloudflareRoute{}
+	for _, rule := range ingress {
+		if rule.Hostname == nil {
+			continue
+		}
+		dir, managed := savedDir[*rule.Hostname]
+		route := CloudflareRoute{
+			Hostname:  *rule.Hostname,
+			Service:   rule.Service,
+			Managed:   managed,
+			DnsRecord: hasRecord[*rule.Hostname],
+		}
+		for _, app := range appList {
+			if (dir != "" && app.Dir == dir) || cloudflare.HostFromUrl(app.Url) == *rule.Hostname {
+				route.AppId = &app.Id
+				route.AppName = &app.Name
+				break
+			}
+		}
+		routes = append(routes, route)
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d routes found", len(routes)), Data: routes})
+}
+
+func GetCloudflareDNS(c echo.Context) error {
+	records, err := cloudflare.ListDNSRecords()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d records found", len(records)), Data: records})
+}
+
+func AddCloudflareHostname(c echo.Context) error {
+	var data struct {
+		Hostname string `json:"hostname"`
+		Port     string `json:"port"`
+		AppId    string `json:"appId"`
+	}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	dir := ""
+	if data.AppId != "" {
+		if !apps.ValidID(data.AppId) {
+			return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid app id"})
+		}
+		container := apps.Container{ID: data.AppId}
+		app, err := container.GetApp()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+		}
+		dir = app.Dir
+		if data.Port == "" && app.CloudflarePort != nil {
+			data.Port = *app.CloudflarePort
+		}
+	}
+
+	if _, err := strconv.Atoi(data.Port); err != nil || data.Hostname == "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Hostname and a valid port are required"})
+	}
+
+	err = cloudflare.AddHostname(strings.ToLower(strings.TrimSpace(data.Hostname)), data.Port, dir)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Hostname created"})
+}
+
+func RemoveCloudflareHostname(c echo.Context) error {
+	hostname := c.Param("hostname")
+	if hostname == "" {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Hostname must be sent"})
+	}
+
+	err := cloudflare.RemoveHostname(hostname, c.QueryParam("dns") == "true")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Hostname removed"})
 }
 
 func SetPihole(c echo.Context) error {

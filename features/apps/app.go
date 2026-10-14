@@ -161,8 +161,7 @@ func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool
 			return err
 		}
 
-		cloudflareConfig := new(cloudflare.Config)
-		err = cloudflareConfig.CreateTunnel(strings.Replace(a.Url, "https://", "", 1), *container.Config.Labels.Port)
+		err = cloudflare.AddHostname(cloudflare.HostFromUrl(a.Url), *container.Config.Labels.Port, a.Dir)
 		if err != nil {
 			return err
 		}

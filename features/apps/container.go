@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/glgaspar/front_desk/features/integrations"
+	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
 )
 
 type Container struct {
@@ -121,26 +124,41 @@ func (c *Container) SaveCompose(compose Compose) (*App, error) {
 	return Rebuild(app.Dir)
 }
 
-func (c *Container) RemoveContainer() error {
+// the string is a warning, the app is gone but something on the side didnt work
+func (c *Container) RemoveContainer() (string, error) {
 	app, err := c.GetApp()
 	if err != nil {
-		return err
+		return "", err
 	}
 	path, err := AppPath(app.Dir)
 	if err != nil {
-		return err
+		return "", err
+	}
+
+	warning := ""
+	cloudflareEnabled, _ := integrations.CheckFor("cloudflare")
+	if cloudflareEnabled {
+		port := ""
+		if app.CloudflarePort != nil {
+			port = *app.CloudflarePort
+		}
+		err = cloudflare.RemoveForApp(app.Dir, cloudflare.HostFromUrl(app.Url), port)
+		if err != nil {
+			fmt.Println("Error:", err)
+			warning = "Could not clean cloudflare: " + err.Error()
+		}
 	}
 
 	// only the images this app built. prune used to clean the whole server, oops
 	_, err = runDocker(context.Background(), path, "compose", "down", "--rmi", "local")
 	if err != nil {
-		return err
+		return warning, err
 	}
 
 	err = os.RemoveAll(path)
 	if err != nil {
-		return err
+		return warning, err
 	}
 
-	return nil
+	return warning, nil
 }

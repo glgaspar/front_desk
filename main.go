@@ -155,6 +155,10 @@ func main() {
 
 	e.POST("/cloudflare/config", controller.SetCloudflare)
 	e.GET("/cloudflare/config", controller.GetCloudflare)
+	e.GET("/cloudflare/routes", controller.GetCloudflareRoutes)
+	e.GET("/cloudflare/dns", controller.GetCloudflareDNS)
+	e.POST("/cloudflare/hostname", controller.AddCloudflareHostname)
+	e.DELETE("/cloudflare/hostname/:hostname", controller.RemoveCloudflareHostname)
 
 	e.POST("/pihole/config", controller.SetPihole)
 	e.GET("/pihole/config", controller.GetPihole)

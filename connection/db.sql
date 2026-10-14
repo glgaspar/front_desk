@@ -97,3 +97,12 @@ CREATE TABLE IF NOT EXISTS frontdesk.image_update_checks (
     checked_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT image_update_checks_pkey PRIMARY KEY (image_ref)
 );
+----
+CREATE TABLE IF NOT EXISTS frontdesk.cloudflare_routes (
+    hostname varchar(255) NOT NULL,
+    app_dir varchar(255) NULL,
+    service varchar(255) NOT NULL,
+    dns_record_id varchar(64) NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT cloudflare_routes_pkey PRIMARY KEY (hostname)
+);
