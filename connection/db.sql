@@ -178,3 +178,9 @@ CREATE TABLE IF NOT EXISTS frontdesk.npm_routes (
     created_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT npm_routes_pkey PRIMARY KEY (proxy_host_id)
 );
+----
+ALTER TABLE frontdesk.users ADD COLUMN IF NOT EXISTS is_admin bool NOT NULL DEFAULT false;
+----
+UPDATE frontdesk.users SET is_admin = true
+WHERE id = (SELECT min(id) FROM frontdesk.users)
+AND NOT EXISTS (SELECT 1 FROM frontdesk.users WHERE is_admin);

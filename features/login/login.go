@@ -47,26 +47,37 @@ func CreateDatabase() error {
 
 }
 
-func LoginValidator(cookie string) (bool, time.Time, error) {
+// who is on the other side of the cookie
+type SessionUser struct {
+	Id       int    `json:"id"`
+	UserName string `json:"userName"`
+	IsAdmin  bool   `json:"isAdmin"`
+	Token    string `json:"-"`
+}
+
+// nil user means the session is not valid
+func LoginValidator(cookie string) (*SessionUser, time.Time, error) {
 	var expire time.Time
 	conn, err := connection.Db()
 	if err != nil {
-		return false, expire, err
+		return nil, expire, err
 	}
 
+	user := SessionUser{Token: cookie}
 	query := `
-	select expire
-	from frontdesk.activesessions
-	where token = $1 and expire >= now() `
-	err = conn.QueryRow(query, cookie).Scan(&expire)
+	select s.expire, u.id, u.username, u.is_admin
+	from frontdesk.activesessions s
+	join frontdesk.users u on u.id = s.userid
+	where s.token = $1 and s.expire >= now() `
+	err = conn.QueryRow(query, cookie).Scan(&expire, &user.Id, &user.UserName, &user.IsAdmin)
 	if err == sql.ErrNoRows {
-		return false, expire, nil
+		return nil, expire, nil
 	}
 	if err != nil {
-		return false, expire, err
+		return nil, expire, err
 	}
 
-	return true, expire, nil
+	return &user, expire, nil
 }
 
 // pushes the session another 24h from now
@@ -118,6 +129,7 @@ type LoginUser struct {
 	Id       int    `json:"id" db:"id"`
 	UserName string `json:"userName" db:"userName"`
 	Password string `json:"password" db:"password"`
+	IsAdmin  bool   `json:"isAdmin" db:"is_admin"`
 }
 
 type SessionCookie struct {
@@ -237,12 +249,13 @@ func (u *LoginUser) Create() (LoginUser, error) {
 		return *u, err
 	}
 
+	// first user ever is the admin
 	query := `
-	insert into frontdesk.users (username, password)
-	values ($1,$2)
-	RETURNING id, username`
+	insert into frontdesk.users (username, password, is_admin)
+	values ($1, $2, not exists (select 1 from frontdesk.users))
+	RETURNING id, username, is_admin`
 
-	err = conn.QueryRow(query, u.UserName, hashPass).Scan(&u.Id, &u.UserName)
+	err = conn.QueryRow(query, u.UserName, hashPass).Scan(&u.Id, &u.UserName, &u.IsAdmin)
 	if err != nil {
 		return *u, err
 	}

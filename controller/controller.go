@@ -79,13 +79,32 @@ func Login(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Login successful"})
 }
 
-func LoginValidator(c *http.Cookie) (bool, time.Time, error) {
+func LoginValidator(c *http.Cookie) (*login.SessionUser, time.Time, error) {
 	cookie := c.Value
 	if cookie == "" {
-		return false, time.Time{}, nil
+		return nil, time.Time{}, nil
 	}
 
 	return login.LoginValidator(cookie)
+}
+
+// the middleware puts the user here. on DEV there is no login so everyone is an admin
+func CurrentUser(c echo.Context) *login.SessionUser {
+	if user, ok := c.Get("user").(*login.SessionUser); ok && user != nil {
+		return user
+	}
+	if os.Getenv("ENVIROMENT") == "DEV" {
+		return &login.SessionUser{Id: 0, UserName: "dev", IsAdmin: true}
+	}
+	return nil
+}
+
+func Me(c echo.Context) error {
+	user := CurrentUser(c)
+	if user == nil {
+		return c.JSON(http.StatusUnauthorized, Response{Status: false, Message: "You're not logged in"})
+	}
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: user})
 }
 
 // COOKIE_SECURE=true if you are behind https (you should be)

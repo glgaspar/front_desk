@@ -40,13 +40,14 @@ func authentication(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "You're not logged in"})
 		}
 
-		valid, expire, err := controller.LoginValidator(cookie)
+		user, expire, err := controller.LoginValidator(cookie)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "Something went wrong: "+ err.Error()})
 		}
-		if !valid {
+		if user == nil {
 			return c.JSON(http.StatusUnauthorized, controller.Response{Status: false, Message: "You're not logged in"})
 		}
+		c.Set("user", user)
 		
 		// update cookie to extend session if expiring in lass than 1 hour
 		// the browser never sends the expire date back so we check the one in the db
@@ -132,6 +133,7 @@ func main() {
 	e.POST("/register", controller.Signup)
 	e.POST("/login", controller.Login)
 	e.GET("/login/logout", controller.Logout)
+	e.GET("/me", controller.Me)
 	
 	e.GET("/validate", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") //returns ok if the middleware validation passed
