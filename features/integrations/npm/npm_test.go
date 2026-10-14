@@ -92,3 +92,26 @@ func TestCallWithToken(t *testing.T) {
 		t.Errorf("expected a 404, got %v", err)
 	}
 }
+
+func TestCheckCertificate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/tokens" {
+			json.NewEncoder(w).Encode(map[string]interface{}{"token": "abc", "expires": time.Now().Add(time.Hour)})
+			return
+		}
+		w.Write([]byte(`[{"id":3,"nice_name":"*.example.com","provider":"letsencrypt","domain_names":["*.example.com"]}]`))
+	}))
+	defer server.Close()
+	forgetToken()
+
+	c := Config{Url: server.URL, Email: "a", Password: "b"}
+	if err := c.checkCertificate(0); err != nil {
+		t.Errorf("0 means no certificate, should pass: %v", err)
+	}
+	if err := c.checkCertificate(3); err != nil {
+		t.Errorf("3 exists: %v", err)
+	}
+	if err := c.checkCertificate(999); err == nil {
+		t.Error("999 does not exist and passed")
+	}
+}
