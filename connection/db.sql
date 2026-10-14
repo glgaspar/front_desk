@@ -156,3 +156,25 @@ CREATE TABLE IF NOT EXISTS frontdesk.notification_channels (
     CONSTRAINT notification_channels_pkey PRIMARY KEY (id),
     CONSTRAINT notification_channels_type_chk CHECK (type IN ('ntfy','discord','telegram','webhook'))
 );
+----
+CREATE TABLE IF NOT EXISTS frontdesk.nginx_proxy_manager (
+    config_id int4 NOT NULL DEFAULT 1,
+    url varchar(255) NOT NULL,
+    email varchar(255) NOT NULL,
+    password varchar(255) NOT NULL,
+    forward_host varchar(255) NOT NULL,
+    default_certificate_id int4 NOT NULL DEFAULT 0,
+    CONSTRAINT nginx_proxy_manager_pkey PRIMARY KEY (config_id),
+    CONSTRAINT nginx_proxy_manager_single_row CHECK (config_id = 1)
+);
+----
+INSERT INTO frontdesk.integrations_available (name, enabled) 
+VALUES ('nginxproxymanager', false) ON CONFLICT (name) DO NOTHING;
+----
+CREATE TABLE IF NOT EXISTS frontdesk.npm_routes (
+    proxy_host_id int4 NOT NULL,
+    hostname varchar(255) NOT NULL,
+    app_dir varchar(255) NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT npm_routes_pkey PRIMARY KEY (proxy_host_id)
+);

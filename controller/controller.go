@@ -15,6 +15,7 @@ import (
 	"github.com/glgaspar/front_desk/features/apps"
 	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
+	"github.com/glgaspar/front_desk/features/integrations/npm"
 	"github.com/glgaspar/front_desk/features/integrations/pihole"
 	"github.com/glgaspar/front_desk/features/integrations/transmission"
 	"github.com/glgaspar/front_desk/features/integrations/widgets"
@@ -636,6 +637,198 @@ func RemoveCloudflareHostname(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Hostname removed"})
+}
+
+func SetNPM(c echo.Context) error {
+	var data npm.Config
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = data.SetNPM()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	// trying to log in right away, better to find out the password is wrong now
+	_, err = npm.ListProxyHosts()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Saved, but " + err.Error()})
+	}
+
+	err = integrations.SetAvailable("nginxproxymanager")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}
+
+func GetNPM(c echo.Context) error {
+	enabled, err := integrations.CheckFor("nginxproxymanager")
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	config, err := npm.PublicConfig()
+	if err != nil {
+		return c.JSON(http.StatusOK, Response{Status: false, Message: "Nginx Proxy Manager not configured"})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: enabled, Message: "Operation successful", Data: config})
+}
+
+type NPMHost struct {
+	npm.ProxyHost
+	AppId   *string `json:"appId"`
+	AppName *string `json:"appName"`
+	Managed bool    `json:"managed"`
+}
+
+func GetNPMHosts(c echo.Context) error {
+	hosts, err := npm.ListProxyHosts()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	saved, err := npm.ListSavedRoutes()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	savedDir := map[int]string{}
+	for _, r := range saved {
+		savedDir[r.ProxyHostId] = r.AppDir
+	}
+
+	appList, err := new(apps.App).GetList()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	list := []NPMHost{}
+	for _, host := range hosts {
+		dir, managed := savedDir[host.Id]
+		item := NPMHost{ProxyHost: host, Managed: managed}
+		for _, app := range appList {
+			appHost := cloudflare.HostFromUrl(app.Url)
+			matches := dir != "" && app.Dir == dir
+			for _, domain := range host.DomainNames {
+				if appHost != "" && strings.EqualFold(domain, appHost) {
+					matches = true
+				}
+			}
+			if matches {
+				item.AppId = &app.Id
+				item.AppName = &app.Name
+				break
+			}
+		}
+		list = append(list, item)
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d hosts found", len(list)), Data: list})
+}
+
+func GetNPMCertificates(c echo.Context) error {
+	certs, err := npm.ListCertificates()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d certificates found", len(certs)), Data: certs})
+}
+
+func AddNPMHost(c echo.Context) error {
+	var data struct {
+		Hostname      string `json:"hostname"`
+		Port          string `json:"port"`
+		AppId         string `json:"appId"`
+		CertificateId *int   `json:"certificateId"`
+	}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	dir := ""
+	if data.AppId != "" {
+		if !apps.ValidID(data.AppId) {
+			return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid app id"})
+		}
+		container := apps.Container{ID: data.AppId}
+		app, err := container.GetApp()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+		}
+		dir = app.Dir
+		if data.Port == "" {
+			data.Port = app.ForwardPort()
+		}
+	}
+
+	certId := npm.DefaultCertificate()
+	if data.CertificateId != nil {
+		certId = *data.CertificateId
+	}
+
+	host, err := npm.AddProxyHost(data.Hostname, data.Port, dir, certId)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Proxy host created", Data: host})
+}
+
+func SetNPMCertificate(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	var data struct {
+		CertificateId int `json:"certificateId"`
+	}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = npm.SetCertificate(id, data.CertificateId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Certificate updated"})
+}
+
+func RemoveNPMHost(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	err = npm.RemoveProxyHost(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Proxy host removed"})
 }
 
 func SetPihole(c echo.Context) error {

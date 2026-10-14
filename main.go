@@ -175,6 +175,14 @@ func main() {
 	e.POST("/cloudflare/hostname", controller.AddCloudflareHostname)
 	e.DELETE("/cloudflare/hostname/:hostname", controller.RemoveCloudflareHostname)
 
+	e.POST("/npm/config", controller.SetNPM)
+	e.GET("/npm/config", controller.GetNPM)
+	e.GET("/npm/hosts", controller.GetNPMHosts)
+	e.GET("/npm/certificates", controller.GetNPMCertificates)
+	e.POST("/npm/hosts", controller.AddNPMHost)
+	e.PUT("/npm/hosts/:id/certificate", controller.SetNPMCertificate)
+	e.DELETE("/npm/hosts/:id", controller.RemoveNPMHost)
+
 	e.POST("/pihole/config", controller.SetPihole)
 	e.GET("/pihole/config", controller.GetPihole)
 	e.GET("/pihole/history", controller.PiholeHistory)
