@@ -46,6 +46,26 @@ func Signup(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
 	}
 
+	// the first one can register alone, after that only an admin creates users
+	if os.Getenv("FIRST_ACCESS") != "YES" {
+		user := CurrentUser(c)
+		if user == nil || !user.IsAdmin {
+			return c.JSON(http.StatusForbidden, Response{Status: false, Message: "Only admins can do that"})
+		}
+	}
+
+	data.UserName = strings.TrimSpace(data.UserName)
+	if data.UserName == "" || len(data.UserName) > 50 || len(data.Password) < 4 {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Name must have up to 50 characters and the password at least 4"})
+	}
+	taken, err := login.UsernameTaken(data.UserName, 0)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	if taken {
+		return c.JSON(http.StatusConflict, Response{Status: false, Message: data.UserName + " is already taken"})
+	}
+
 	_, err = data.Create()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
@@ -97,6 +117,171 @@ func CurrentUser(c echo.Context) *login.SessionUser {
 		return &login.SessionUser{Id: 0, UserName: "dev", IsAdmin: true}
 	}
 	return nil
+}
+
+func GetUsers(c echo.Context) error {
+	user := CurrentUser(c)
+	if user == nil {
+		return c.JSON(http.StatusUnauthorized, Response{Status: false, Message: "You're not logged in"})
+	}
+
+	users, err := login.ListUsers()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	// regular users only get to see themselves
+	if !user.IsAdmin {
+		mine := []login.User{}
+		for _, u := range users {
+			if u.Id == user.Id {
+				mine = append(mine, u)
+			}
+		}
+		users = mine
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d users found", len(users)), Data: users})
+}
+
+func UpdateUser(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	user := CurrentUser(c)
+	if !login.CanEditUser(user, id) {
+		return c.JSON(http.StatusForbidden, Response{Status: false, Message: "You can only change your own user"})
+	}
+
+	var data struct {
+		UserName        string `json:"userName"`
+		Password        string `json:"password"`
+		CurrentPassword string `json:"currentPassword"`
+	}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	if _, err := login.GetUser(id); err != nil {
+		return c.JSON(http.StatusNotFound, Response{Status: false, Message: err.Error()})
+	}
+
+	if data.Password != "" {
+		// your own password needs the old one, someone could be using your open tab
+		if user.Id == id {
+			ok, err := login.CheckPassword(id, data.CurrentPassword)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+			}
+			if !ok {
+				return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Current password is wrong"})
+			}
+		}
+		keep := ""
+		if user.Id == id {
+			keep = user.Token
+		}
+		err = login.SetPassword(id, data.Password, keep)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+		}
+	}
+
+	if data.UserName != "" {
+		err = login.Rename(id, data.UserName)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+		}
+	}
+
+	updated, err := login.GetUser(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "User updated", Data: updated})
+}
+
+func SetUserAdmin(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	var data struct {
+		IsAdmin bool `json:"isAdmin"`
+	}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	target, err := login.GetUser(id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, Response{Status: false, Message: err.Error()})
+	}
+
+	if !data.IsAdmin {
+		admins, err := login.AdminCount()
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+		}
+		if !login.CanLoseAdmin(*target, admins) {
+			return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "That is the last admin, make someone else admin first"})
+		}
+	}
+
+	err = login.SetAdmin(id, data.IsAdmin)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "User updated"})
+}
+
+func DeleteUser(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Id must be a valid integer"})
+	}
+
+	user := CurrentUser(c)
+	if user != nil && user.Id == id {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "You cant delete yourself"})
+	}
+
+	target, err := login.GetUser(id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, Response{Status: false, Message: err.Error()})
+	}
+
+	admins, err := login.AdminCount()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	if !login.CanLoseAdmin(*target, admins) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "That is the last admin"})
+	}
+
+	err = login.DeleteUser(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "User removed"})
 }
 
 func Me(c echo.Context) error {

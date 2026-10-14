@@ -134,6 +134,10 @@ func main() {
 	e.POST("/login", controller.Login)
 	e.GET("/login/logout", controller.Logout)
 	e.GET("/me", controller.Me)
+	e.GET("/users", controller.GetUsers)
+	e.PUT("/users/:id", controller.UpdateUser)
+	e.PUT("/users/:id/admin", controller.SetUserAdmin)
+	e.DELETE("/users/:id", controller.DeleteUser)
 	
 	e.GET("/validate", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") //returns ok if the middleware validation passed
