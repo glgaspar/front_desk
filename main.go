@@ -125,6 +125,7 @@ func main() {
 	if enviroment != "DEV" {
 		e.Use(authentication)
 	}
+	e.Use(controller.ActivityLogger)
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok") 
@@ -134,6 +135,8 @@ func main() {
 	e.POST("/login", controller.Login)
 	e.GET("/login/logout", controller.Logout)
 	e.GET("/me", controller.Me)
+	e.GET("/activity", controller.GetActivity)
+	e.POST("/activity", controller.TrackActivity)
 	e.GET("/users", controller.GetUsers)
 	e.PUT("/users/:id", controller.UpdateUser)
 	e.PUT("/users/:id/admin", controller.SetUserAdmin)

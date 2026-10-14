@@ -184,3 +184,19 @@ ALTER TABLE frontdesk.users ADD COLUMN IF NOT EXISTS is_admin bool NOT NULL DEFA
 UPDATE frontdesk.users SET is_admin = true
 WHERE id = (SELECT min(id) FROM frontdesk.users)
 AND NOT EXISTS (SELECT 1 FROM frontdesk.users WHERE is_admin);
+----
+CREATE TABLE IF NOT EXISTS frontdesk.activity_log (
+    id bigserial NOT NULL,
+    user_id int4 NULL,
+    username varchar(50) NULL,
+    action varchar(100) NOT NULL,
+    target text NULL,
+    status int4 NULL,
+    ip varchar(64) NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT activity_log_pkey PRIMARY KEY (id)
+);
+----
+CREATE INDEX IF NOT EXISTS activity_log_time_idx ON frontdesk.activity_log (created_at);
+----
+CREATE INDEX IF NOT EXISTS activity_log_user_idx ON frontdesk.activity_log (user_id, id DESC);

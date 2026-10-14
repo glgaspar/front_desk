@@ -91,6 +91,7 @@ func Login(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
 	}
 
+	LogLogin(c, data.Id, data.UserName, newSession.Valid)
 	if !newSession.Valid {
 		return c.JSON(http.StatusUnauthorized, Response{Status: false, Message: "Login failed. Check your credentials"})
 	}

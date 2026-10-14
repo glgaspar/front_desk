@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/glgaspar/front_desk/connection"
+	"github.com/glgaspar/front_desk/features/activity"
 	"github.com/glgaspar/front_desk/features/apps"
 )
 
@@ -202,5 +203,9 @@ func Cleanup() error {
 		return err
 	}
 	_, err = conn.Exec(`delete from frontdesk.host_metrics where sampled_at < now() - make_interval(days => $1)`, days)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return activity.Cleanup(envInt("ACTIVITY_RETENTION_DAYS", 90))
 }
