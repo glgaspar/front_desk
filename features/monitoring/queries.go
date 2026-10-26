@@ -126,11 +126,11 @@ func GetUptimeHistory(appKey string, r string) ([]UptimePoint, error) {
 }
 
 type MetricPoint struct {
-	Time        time.Time `json:"time"`
-	CPUPercent  float64   `json:"cpuPercent"`
-	MemPercent  float64   `json:"memPercent"`
-	DiskPercent *float64  `json:"diskPercent"`
-	Load1       *float64  `json:"load1"`
+	Time       time.Time          `json:"time"`
+	CPUPercent float64            `json:"cpuPercent"`
+	MemPercent float64            `json:"memPercent"`
+	Load1      *float64           `json:"load1"`
+	Disks      map[string]float64 `json:"disks"` // path -> used percent
 }
 
 func GetMetricsHistory(r string) ([]MetricPoint, error) {
@@ -148,7 +148,6 @@ func GetMetricsHistory(r string) ([]MetricPoint, error) {
 		to_timestamp(floor(extract(epoch from sampled_at) / $2) * $2) as bucket,
 		avg(cpu_percent),
 		avg(mem_percent),
-		avg(disk_percent),
 		avg(load1)
 	from frontdesk.host_metrics
 	where sampled_at > $1
@@ -161,13 +160,43 @@ func GetMetricsHistory(r string) ([]MetricPoint, error) {
 	defer rows.Close()
 
 	points := []MetricPoint{}
+	byTime := map[int64]int{}
 	for rows.Next() {
-		var p MetricPoint
-		err = rows.Scan(&p.Time, &p.CPUPercent, &p.MemPercent, &p.DiskPercent, &p.Load1)
+		p := MetricPoint{Disks: map[string]float64{}}
+		err = rows.Scan(&p.Time, &p.CPUPercent, &p.MemPercent, &p.Load1)
 		if err != nil {
 			return nil, err
 		}
+		byTime[p.Time.Unix()] = len(points)
 		points = append(points, p)
+	}
+
+	diskQuery := `
+	select
+		to_timestamp(floor(extract(epoch from sampled_at) / $2) * $2) as bucket,
+		path,
+		avg(used_percent)
+	from frontdesk.host_disk_metrics
+	where sampled_at > $1
+	group by bucket, path`
+	diskRows, err := conn.Query(diskQuery, time.Now().Add(-info.since), info.bucket)
+	if err != nil {
+		return nil, err
+	}
+	defer diskRows.Close()
+
+	for diskRows.Next() {
+		var bucket time.Time
+		var path string
+		var percent float64
+		err = diskRows.Scan(&bucket, &path, &percent)
+		if err != nil {
+			return nil, err
+		}
+		// both are sampled together, a disk bucket without a host bucket is not worth a hole in the chart
+		if i, ok := byTime[bucket.Unix()]; ok {
+			points[i].Disks[path] = percent
+		}
 	}
 	return points, nil
 }

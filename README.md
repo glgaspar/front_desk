@@ -70,6 +70,10 @@ docker compose up -d --build
 
 The apps folder is mounted with the **same path** on the host and inside the container (`/mnt/apps:/mnt/apps`). Docker compose resolves relative volumes (`./data`) from the project folder and the docker daemon reads that path on the host, so if the paths are different your app volumes end up in the wrong place. If you change it, change `APPS_DIR` too.
 
+### Disks
+
+`HOST_DISKS` is a comma separated list of paths, one per disk you want to watch (`HOST_DISKS=/,/mnt/hdd`). The API runs in a container, so any disk other than `/` has to be mounted in it, read only is enough (`/mnt/hdd:/mnt/hdd:ro`). Use the same path on both sides so the name on the screen makes sense. A path that isnt there is just skipped.
+
 ## App labels
 
 Front Desk only cares about containers with these labels:
@@ -113,10 +117,10 @@ labels:
 *   `GET /apps/stats` - CPU and memory per container.
 
 ### System Monitoring
-*   `GET /system/usage` - Fetch CPU, memory, and top process usage statistics from the host machine.
+*   `GET /system/usage` - Fetch CPU, memory, disks and top process usage statistics from the host machine.
 *   `GET /monitoring/uptime?range=24h` - Uptime per app (`1h`, `24h`, `7d`, `30d`).
 *   `GET /monitoring/uptime/history?app=<key>&range=` - Uptime and latency over time for one app.
-*   `GET /monitoring/metrics?range=` - Host CPU, memory and disk over time.
+*   `GET /monitoring/metrics?range=` - Host CPU, memory and each disk over time.
 *   `GET|POST /notifications`, `PUT|DELETE /notifications/:id`, `POST /notifications/:id/test` - Where to yell when something goes down (ntfy, Discord, Telegram or a webhook).
 
 ### Integrations

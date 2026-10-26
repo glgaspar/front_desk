@@ -1,10 +1,13 @@
 package system
 
 import (
+	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
 )
@@ -16,9 +19,17 @@ type ProcUsage struct {
 	MemPercent *float32 `json:"memPercent,omitempty"`
 }
 
+type DiskUsage struct {
+	Path        string  `json:"path"`
+	Total       uint64  `json:"total"`
+	Used        uint64  `json:"used"`
+	UsedPercent float64 `json:"usedPercent"`
+}
+
 type SystemUsage struct {
 	CPUPercent    float64     `json:"cpuPercent"`
 	MemoryPercent float64     `json:"memoryPercent"`
+	Disks         []DiskUsage `json:"disks"`
 	ProcMem       []ProcUsage `json:"procMem"`
 	ProcCPU       []ProcUsage `json:"procCPU"`
 }
@@ -35,6 +46,8 @@ func (s *SystemUsage) GetSystemUsage() error {
 		return err
 	}
 	s.MemoryPercent = *memoryPercent
+
+	s.Disks = GetDisksUsage()
 
 	CPUUsages, memUsages, err := GetProcessesUsage()
 	if err != nil {
@@ -61,6 +74,37 @@ func GetMemoryUsage() (*float64, error) {
 		return nil, err
 	}
 	return &vmStat.UsedPercent, nil
+}
+
+// HOST_DISKS is a comma separated list of paths, one per disk. they need to be mounted in the container
+func DiskPaths() []string {
+	value := os.Getenv("HOST_DISKS")
+	if value == "" {
+		value = os.Getenv("HOST_DISK_PATH")
+	}
+	var paths []string
+	for _, path := range strings.Split(value, ",") {
+		if path = strings.TrimSpace(path); path != "" {
+			paths = append(paths, path)
+		}
+	}
+	if len(paths) == 0 {
+		paths = []string{"/"}
+	}
+	return paths
+}
+
+// a disk that isnt mounted just doesnt show up, no reason to lose the rest over it
+func GetDisksUsage() []DiskUsage {
+	disks := []DiskUsage{}
+	for _, path := range DiskPaths() {
+		usage, err := disk.Usage(path)
+		if err != nil {
+			continue
+		}
+		disks = append(disks, DiskUsage{Path: path, Total: usage.Total, Used: usage.Used, UsedPercent: usage.UsedPercent})
+	}
+	return disks
 }
 
 func GetProcessesUsage() ([]ProcUsage, []ProcUsage, error) {

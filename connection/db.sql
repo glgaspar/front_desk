@@ -145,6 +145,18 @@ CREATE TABLE IF NOT EXISTS frontdesk.host_metrics (
 ----
 CREATE INDEX IF NOT EXISTS host_metrics_time_idx ON frontdesk.host_metrics (sampled_at DESC);
 ----
+CREATE TABLE IF NOT EXISTS frontdesk.host_disk_metrics (
+    id bigserial NOT NULL,
+    path varchar(255) NOT NULL,
+    used_percent real NOT NULL,
+    used_bytes int8 NOT NULL,
+    total_bytes int8 NOT NULL,
+    sampled_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT host_disk_metrics_pkey PRIMARY KEY (id)
+);
+----
+CREATE INDEX IF NOT EXISTS host_disk_metrics_time_idx ON frontdesk.host_disk_metrics (sampled_at DESC);
+----
 CREATE TABLE IF NOT EXISTS frontdesk.notification_channels (
     id serial4 NOT NULL,
     name varchar(100) NOT NULL,

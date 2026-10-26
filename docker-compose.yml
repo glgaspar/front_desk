@@ -26,6 +26,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /mnt/apps:/mnt/apps
+      # one for each extra disk in HOST_DISKS
+      # - /mnt/hdd:/mnt/hdd:ro
     
   zookeeper:
     image: confluentinc/cp-zookeeper:latest

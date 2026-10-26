@@ -1,11 +1,8 @@
 package monitoring
 
 import (
-	"os"
-
 	"github.com/glgaspar/front_desk/connection"
 	"github.com/glgaspar/front_desk/features/system"
-	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/load"
 )
 
@@ -19,16 +16,7 @@ func SaveMetrics() error {
 		return err
 	}
 
-	// these two can fail on some setups, not worth losing the sample over it
-	var diskPercent *float64
-	path := os.Getenv("HOST_DISK_PATH")
-	if path == "" {
-		path = "/"
-	}
-	if usage, err := disk.Usage(path); err == nil {
-		diskPercent = &usage.UsedPercent
-	}
-
+	// can fail on some setups, not worth losing the sample over it
 	var load1 *float64
 	if avg, err := load.Avg(); err == nil {
 		load1 = &avg.Load1
@@ -40,7 +28,19 @@ func SaveMetrics() error {
 	}
 
 	_, err = conn.Exec(`
-	insert into frontdesk.host_metrics (cpu_percent, mem_percent, disk_percent, load1)
-	values ($1, $2, $3, $4)`, *cpu, *mem, diskPercent, load1)
-	return err
+	insert into frontdesk.host_metrics (cpu_percent, mem_percent, load1)
+	values ($1, $2, $3)`, *cpu, *mem, load1)
+	if err != nil {
+		return err
+	}
+
+	for _, d := range system.GetDisksUsage() {
+		_, err = conn.Exec(`
+		insert into frontdesk.host_disk_metrics (path, used_percent, used_bytes, total_bytes)
+		values ($1, $2, $3, $4)`, d.Path, d.UsedPercent, d.Used, d.Total)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

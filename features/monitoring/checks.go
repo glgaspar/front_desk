@@ -206,6 +206,10 @@ func Cleanup() error {
 	if err != nil {
 		return err
 	}
+	_, err = conn.Exec(`delete from frontdesk.host_disk_metrics where sampled_at < now() - make_interval(days => $1)`, days)
+	if err != nil {
+		return err
+	}
 
 	return activity.Cleanup(envInt("ACTIVITY_RETENTION_DAYS", 90))
 }
