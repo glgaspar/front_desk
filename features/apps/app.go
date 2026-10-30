@@ -247,6 +247,13 @@ func (a *App) CreateApp(compose Compose, appName string, dir string, tunnel bool
 	return nil
 }
 
+// a container that stopped on its own. exit code 0 is usually something that was
+// meant to run once, so that one is left alone
+func (a *App) Broken() bool {
+	s := a.State.Status
+	return s == "restarting" || s == "dead" || (s == "exited" && a.State.ExitCode != 0)
+}
+
 // front-desk.port is the one to use, cloudflare-port is still here so old apps keep working
 func (a *App) ForwardPort() string {
 	if a.Port != nil && *a.Port != "" {

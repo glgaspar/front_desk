@@ -212,6 +212,7 @@ func main() {
 
 	e.POST("/apps/explain/:id", controller.ExplainApp)
 
+	e.GET("/attention", controller.GetAttention)
 	e.GET("/monitoring/disks/forecast", controller.GetDiskForecast)
 	e.GET("/media/calendar", controller.GetMediaCalendar)
 	e.GET("/pihole/top", controller.GetPiholeTop)
