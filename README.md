@@ -9,8 +9,12 @@ Front Desk is a powerful, self-hosted backend built in Go that acts as a central
 *   **Authentication & Access Control**: Built-in user authentication and secure cookie-based session management backed by PostgreSQL. Includes a "first access" safeguard to register the initial admin user.
 *   **Service Integrations**:
     *   **Cloudflare**: Automate the creation of Cloudflare Zero Trust tunnels and DNS routing for your self-hosted apps.
-    *   **Pi-hole**: Configure Pi-hole and retrieve DNS query history.
-    *   **Transmission**: Manage torrents (start/stop) and update configurations.
+    *   **Pi-hole**: DNS query history, and a local DNS record for every Nginx Proxy Manager host so the LAN goes straight to it.
+    *   **Transmission** and **qBittorrent**: Manage torrents (start/stop/remove).
+    *   **Jellyfin**, **Seerr**, **Sonarr**, **Radarr**: Who is watching what, and everything on the way from a request to the library.
+    *   **Tdarr**: Transcode queue and space saved.
+    *   **Tailscale**: Which devices are online.
+    *   **Ollama**: Ask a local model what is wrong with a container from its logs.
 *   **System Dashboard**: Fetch host system usage statistics and manage customizable dashboard widgets.
 
 ## Tech Stack
@@ -115,12 +119,16 @@ labels:
 *   `POST /apps/update/:id` - Pull new images and recreate the app (follow it like a build).
 *   `GET /apps/updates` - Check every app for a newer image (`?force=true` skips the cache).
 *   `GET /apps/stats` - CPU and memory per container.
+*   `POST /apps/explain/:id` - Sends the last 200 log lines to Ollama and returns what it thinks is wrong.
 
 ### System Monitoring
 *   `GET /system/usage` - Fetch CPU, memory, disks and top process usage statistics from the host machine.
 *   `GET /monitoring/uptime?range=24h` - Uptime per app (`1h`, `24h`, `7d`, `30d`).
 *   `GET /monitoring/uptime/history?app=<key>&range=` - Uptime and latency over time for one app.
 *   `GET /monitoring/metrics?range=` - Host CPU, memory and each disk over time.
+*   `GET /monitoring/disks/forecast` - Each disk with how much it grows per day and when it gets full, from a straight line over the last 7 days.
+*   `GET /monitoring/summary` - What happened in the last 24h, written by Ollama in the background and kept for 6 hours (`?refresh=true` writes it again, at most every 10 minutes).
+*   `GET /attention` - Everything that needs a human in one list: failed containers, apps down, updates, disks filling up, certificates expiring, Seerr requests waiting, Tdarr errors and Tailscale keys expiring.
 *   `GET|POST /notifications`, `PUT|DELETE /notifications/:id`, `POST /notifications/:id/test` - Where to yell when something goes down (ntfy, Discord, Telegram or a webhook).
 
 ### Integrations
@@ -130,8 +138,18 @@ labels:
 *   `GET /npm/config` / `POST /npm/config` - Connect to Nginx Proxy Manager (url, login, the host it should forward to and a default certificate).
 *   `GET /npm/hosts`, `POST /npm/hosts`, `DELETE /npm/hosts/:id` - Proxy hosts for your apps.
 *   `GET /npm/certificates`, `PUT /npm/hosts/:id/certificate` - Pick which existing certificate goes on each host. Front Desk does not request certificates, do that on NPM.
+*   `GET /services/:name/config` / `POST /services/:name/config` - Url + key integrations: `pihole`, `jellyfin`, `seerr`, `sonarr`, `radarr`, `qbittorrent`, `tdarr`, `tailscale`, `ollama`. It only counts as configured if the service answers. An empty secret keeps the saved one.
 *   `GET /pihole/history` - Retrieve Pi-hole query history.
+*   `GET /pihole/dns`, `POST /pihole/dns`, `DELETE /pihole/dns/:hostname` - Pi-hole local DNS records. Creating or removing an NPM host adds or removes its record on its own.
 *   `GET /transmission/torrents` - List active torrents from Transmission.
+*   `GET /qbittorrent/torrents`, `POST /qbittorrent/toggle/:hash/:action` - Same for qBittorrent (`start`, `stop`, `remove`).
+*   `GET /jellyfin/streams` - Who is watching something right now.
+*   `GET /media/pipeline` - Seerr requests, Sonarr/Radarr queue and the latest on Jellyfin, from whatever is configured.
+*   `GET /tdarr/stats` - Tdarr queue, processed, errors and space saved.
+*   `GET /tailscale/devices` - Devices on your tailnet and if they are online.
+*   `GET /seerr/pending`, `POST /seerr/requests/:id/:action` - Requests waiting for approval, and approving or declining them.
+*   `GET /media/calendar?days=7` - What Sonarr and Radarr expect to come out.
+*   `GET /pihole/top` - Today's blocked percentage, most blocked domains and the clients that ask the most.
 
 ### Widget Control for the FrontEnd
 *   `GET /widgets` - Retrieve dashboard widgets.
