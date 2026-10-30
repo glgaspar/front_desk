@@ -193,3 +193,44 @@ func TestRadarrCalendarPicksTheDateInRange(t *testing.T) {
 		t.Errorf("got %+v", items)
 	}
 }
+
+func TestPiholeTop(t *testing.T) {
+	piholeSession.forget()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/auth":
+			w.Write([]byte(`{"session":{"valid":true,"sid":"s","validity":1800}}`))
+		case "/api/stats/summary":
+			w.Write([]byte(`{"queries":{"total":1000,"blocked":250,"percent_blocked":25.0}}`))
+		case "/api/stats/top_domains":
+			if r.URL.Query().Get("blocked") != "true" {
+				w.WriteHeader(400)
+				return
+			}
+			w.Write([]byte(`{"domains":[{"domain":"ads.example.com","count":90}],"total_queries":1000,"blocked_queries":250}`))
+		case "/api/stats/top_clients":
+			w.Write([]byte(`{"clients":[{"ip":"192.168.0.20","name":"tv","count":400}]}`))
+		}
+	}))
+	defer server.Close()
+
+	c := &Config{Url: server.URL, Secret: "pw"}
+	top := &PiholeTop{}
+	var summary struct {
+		Queries struct {
+			PercentBlocked float64 `json:"percent_blocked"`
+		} `json:"queries"`
+	}
+	if err := pihole(c, "GET", "/stats/summary", &summary); err != nil || summary.Queries.PercentBlocked != 25 {
+		t.Fatalf("got %v %+v", err, summary)
+	}
+	if err := pihole(c, "GET", "/stats/top_domains?blocked=true&count=8", top); err != nil {
+		t.Fatal(err)
+	}
+	if err := pihole(c, "GET", "/stats/top_clients?count=8", top); err != nil {
+		t.Fatal(err)
+	}
+	if len(top.Domains) != 1 || top.Domains[0].Count != 90 || len(top.Clients) != 1 || top.Clients[0].Name != "tv" {
+		t.Errorf("got %+v", top)
+	}
+}

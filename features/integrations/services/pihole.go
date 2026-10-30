@@ -225,3 +225,52 @@ func RemoveDns(hostname string, onlyOurs bool) error {
 	}
 	return nil
 }
+
+type PiholeTop struct {
+	Total          int     `json:"total"`
+	Blocked        int     `json:"blocked"`
+	PercentBlocked float64 `json:"percentBlocked"`
+	Domains        []struct {
+		Domain string `json:"domain"`
+		Count  int    `json:"count"`
+	} `json:"domains"`
+	Clients []struct {
+		Ip    string `json:"ip"`
+		Name  string `json:"name"`
+		Count int    `json:"count"`
+	} `json:"clients"`
+}
+
+// the day so far: how much got blocked, what got blocked the most and who asks the most
+func GetPiholeTop() (*PiholeTop, error) {
+	c, err := loadEnabled("pihole")
+	if err != nil {
+		return nil, err
+	}
+
+	top := &PiholeTop{}
+	var summary struct {
+		Queries struct {
+			Total          int     `json:"total"`
+			Blocked        int     `json:"blocked"`
+			PercentBlocked float64 `json:"percent_blocked"`
+		} `json:"queries"`
+	}
+	err = pihole(c, "GET", "/stats/summary", &summary)
+	if err != nil {
+		return nil, err
+	}
+	top.Total = summary.Queries.Total
+	top.Blocked = summary.Queries.Blocked
+	top.PercentBlocked = summary.Queries.PercentBlocked
+
+	err = pihole(c, "GET", "/stats/top_domains?blocked=true&count=8", top)
+	if err != nil {
+		return nil, err
+	}
+	err = pihole(c, "GET", "/stats/top_clients?count=8", top)
+	if err != nil {
+		return nil, err
+	}
+	return top, nil
+}

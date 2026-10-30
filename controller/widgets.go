@@ -51,3 +51,12 @@ func GetMediaCalendar(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: services.MediaCalendar(days)})
 }
+
+func GetPiholeTop(c echo.Context) error {
+	top, err := services.GetPiholeTop()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: top})
+}
