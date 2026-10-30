@@ -26,6 +26,54 @@ func GetDiskForecast(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: forecast})
 }
 
+// ollama on a cpu takes minutes, longer than a proxy waits for an answer. so the summary is
+// written in the background, kept for 6 hours, and the front keeps asking until it shows up
+var summary struct {
+	sync.Mutex
+	Text        string    `json:"text"`
+	GeneratedAt time.Time `json:"generatedAt"`
+	Generating  bool      `json:"generating"`
+	Error       string    `json:"error"`
+}
+
+func writeSummary() {
+	var text string
+	facts, err := monitoring.DailyFacts()
+	if err == nil {
+		text, err = services.Summarize(facts)
+	}
+
+	summary.Lock()
+	defer summary.Unlock()
+	summary.Generating = false
+	if err != nil {
+		summary.Error = err.Error()
+		return
+	}
+	summary.Text = text
+	summary.Error = ""
+	summary.GeneratedAt = time.Now()
+}
+
+func GetDailySummary(c echo.Context) error {
+	summary.Lock()
+	defer summary.Unlock()
+
+	age := time.Since(summary.GeneratedAt)
+	refresh := c.QueryParam("refresh") == "true" && age > 10*time.Minute
+	if !summary.Generating && (summary.Text == "" && summary.Error == "" || age > 6*time.Hour || refresh) {
+		summary.Generating = true
+		go writeSummary()
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: map[string]interface{}{
+		"text":        summary.Text,
+		"generatedAt": summary.GeneratedAt,
+		"generating":  summary.Generating,
+		"error":       summary.Error,
+	}})
+}
+
 func GetSeerrPending(c echo.Context) error {
 	pending, err := services.SeerrPendingRequests()
 	if err != nil {

@@ -68,3 +68,19 @@ func ask(c *Config, prompt string) (string, error) {
 	}
 	return strings.TrimSpace(res.Response), nil
 }
+
+// facts is everything that happened, already written as plain text by whoever calls it
+func Summarize(facts string) (string, error) {
+	c, err := loadEnabled("ollama")
+	if err != nil {
+		return "", err
+	}
+
+	prompt := fmt.Sprintf(`You are writing the daily report of a home server for its owner.
+Here is what happened in the last 24 hours:
+
+%s
+
+Write a short summary in 3 to 6 sentences, plain text, no lists or headings. Start with whatever needs attention, if anything. Mention numbers when they matter. If everything was quiet, say so in one sentence.`, facts)
+	return ask(c, prompt)
+}

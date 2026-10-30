@@ -214,6 +214,7 @@ func main() {
 
 	e.GET("/attention", controller.GetAttention)
 	e.GET("/monitoring/disks/forecast", controller.GetDiskForecast)
+	e.GET("/monitoring/summary", controller.GetDailySummary)
 	e.GET("/media/calendar", controller.GetMediaCalendar)
 	e.GET("/pihole/top", controller.GetPiholeTop)
 	e.GET("/seerr/pending", controller.GetSeerrPending)
