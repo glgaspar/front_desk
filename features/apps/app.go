@@ -73,6 +73,11 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 	}
 
 	_, err := runDocker(context.Background(), "", toggle, id)
+	if err != nil && toggle == "start" && strings.Contains(err.Error(), "network") && strings.Contains(err.Error(), "not found") {
+		// the compose network was recreated and the container still points to the old one.
+		// start can never fix that, recreating the container does
+		return a.recreate(id)
+	}
 	if err != nil {
 		return err
 	}
@@ -85,6 +90,40 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 	*a = *app
 	return nil
 
+}
+
+// the id changes, so it finds the new container by the name label
+func (a *App) recreate(id string) error {
+	old, err := (&Container{ID: id}).GetApp()
+	if err != nil {
+		return err
+	}
+	path, err := AppPath(old.Dir)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	_, err = runDocker(ctx, path, "compose", "up", "-d", "--force-recreate")
+	if err != nil {
+		return err
+	}
+
+	containers, err := inspectCompose(path)
+	if err != nil {
+		return err
+	}
+	if len(containers) == 0 {
+		return fmt.Errorf("recreated %s but no container came back", old.Name)
+	}
+	*a = containers[0].Translate()
+	for _, c := range containers {
+		if c.Config.Labels.Name == old.Name {
+			*a = c.Translate()
+		}
+	}
+	return nil
 }
 
 // just the end of the log, not following. for when something needs to read it, not a person
