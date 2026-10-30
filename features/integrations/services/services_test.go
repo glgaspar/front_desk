@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestPiholeSessionAndDns(t *testing.T) {
@@ -169,5 +170,26 @@ func TestTdarrStats(t *testing.T) {
 	}
 	if stats.Queue != 5 || stats.Processed != 90 || stats.Errored != 1 || stats.SavedGB != 12.5 || stats.Files != 100 {
 		t.Errorf("got %+v", stats)
+	}
+}
+
+func TestRadarrCalendarPicksTheDateInRange(t *testing.T) {
+	soon := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
+	old := time.Now().AddDate(0, -3, 0).UTC().Format(time.RFC3339)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("start") == "" || r.URL.Query().Get("end") == "" {
+			w.WriteHeader(400)
+			return
+		}
+		w.Write([]byte(`[{"title":"Movie","year":2026,"inCinemas":"` + old + `","digitalRelease":"` + soon + `","hasFile":false}]`))
+	}))
+	defer server.Close()
+
+	items, err := radarrCalendar(&Config{Url: server.URL}, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Title != "Movie (2026) digital" {
+		t.Errorf("got %+v", items)
 	}
 }

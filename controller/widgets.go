@@ -42,3 +42,12 @@ func AnswerSeerrRequest(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
 }
+
+func GetMediaCalendar(c echo.Context) error {
+	days, err := strconv.Atoi(c.QueryParam("days"))
+	if err != nil || days < 1 || days > 31 {
+		days = 7
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: services.MediaCalendar(days)})
+}

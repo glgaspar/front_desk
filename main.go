@@ -213,6 +213,7 @@ func main() {
 	e.POST("/apps/explain/:id", controller.ExplainApp)
 
 	e.GET("/monitoring/disks/forecast", controller.GetDiskForecast)
+	e.GET("/media/calendar", controller.GetMediaCalendar)
 	e.GET("/seerr/pending", controller.GetSeerrPending)
 	e.POST("/seerr/requests/:id/:action", controller.AnswerSeerrRequest, controller.AdminOnly)
 
