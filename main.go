@@ -202,6 +202,7 @@ func main() {
 	e.POST("/pihole/dns", controller.AddPiholeDns, controller.AdminOnly)
 	e.DELETE("/pihole/dns/:hostname", controller.RemovePiholeDns, controller.AdminOnly)
 
+	e.GET("/jellyfin/streams", controller.GetJellyfinStreams)
 
 
 

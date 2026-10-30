@@ -106,3 +106,12 @@ func RemovePiholeDns(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Record removed"})
 }
+
+func GetJellyfinStreams(c echo.Context) error {
+	streams, err := services.JellyfinStreams()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d streams", len(streams)), Data: streams})
+}

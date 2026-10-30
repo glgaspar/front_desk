@@ -32,7 +32,8 @@ type service struct {
 }
 
 var known = map[string]service{
-	"pihole": {needsUrl: true, needsSecret: true, check: checkPihole},
+	"jellyfin": {needsUrl: true, needsSecret: true, check: checkJellyfin},
+	"pihole":   {needsUrl: true, needsSecret: true, check: checkPihole},
 }
 
 func Known(name string) bool {
