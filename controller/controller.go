@@ -16,7 +16,6 @@ import (
 	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/glgaspar/front_desk/features/integrations/cloudflare"
 	"github.com/glgaspar/front_desk/features/integrations/npm"
-	"github.com/glgaspar/front_desk/features/integrations/pihole"
 	"github.com/glgaspar/front_desk/features/integrations/transmission"
 	"github.com/glgaspar/front_desk/features/integrations/widgets"
 	"github.com/glgaspar/front_desk/features/login"
@@ -1046,50 +1045,6 @@ func RemoveNPMHost(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Proxy host removed"})
-}
-
-func SetPihole(c echo.Context) error {
-	var data pihole.Config
-	body, err := io.ReadAll(c.Request().Body)
-	if err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-	defer c.Request().Body.Close()
-
-	if err := json.Unmarshal(body, &data); err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
-	}
-
-	err = data.SetPihole()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
-	}
-
-	err = integrations.SetAvailable("pihole")
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
-	}
-
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
-}
-
-func GetPihole(c echo.Context) error {
-	enabled, err := integrations.CheckFor("pihole")
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
-	}
-
-	return c.JSON(http.StatusOK, Response{Status: enabled, Message: "Operation successful"})
-}
-
-func PiholeHistory(c echo.Context) error {
-	pihole := pihole.Pihole{}
-	history, err := pihole.GetHistory()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
-	}
-
-	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: history})
 }
 
 func SetTransmission(c echo.Context) error {

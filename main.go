@@ -193,9 +193,15 @@ func main() {
 	e.PUT("/npm/hosts/:id/certificate", controller.SetNPMCertificate, controller.AdminOnly)
 	e.DELETE("/npm/hosts/:id", controller.RemoveNPMHost, controller.AdminOnly)
 
-	e.POST("/pihole/config", controller.SetPihole, controller.AdminOnly)
-	e.GET("/pihole/config", controller.GetPihole)
+	// the integrations that are just an url and a key share the same config
+	e.POST("/services/:name/config", controller.SetService, controller.AdminOnly)
+	e.GET("/services/:name/config", controller.GetService)
+
 	e.GET("/pihole/history", controller.PiholeHistory)
+
+
+
+
 
 	e.POST("/transmission/config", controller.SetTransmission, controller.AdminOnly)
 	e.GET("/transmission/config", controller.GetTransmission)

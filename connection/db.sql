@@ -25,14 +25,6 @@ CREATE TABLE IF NOT EXISTS frontdesk.cloudflare (
     CONSTRAINT cloudflare_single_row CHECK (config_id = 1)
 );
 ----
-CREATE TABLE IF NOT EXISTS frontdesk.pihole (
-    config_id int4 NOT NULL DEFAULT 1,
-    url varchar(255) NOT NULL,
-    password varchar(255) NOT NULL,
-    CONSTRAINT pihole_pkey PRIMARY KEY (config_id),
-    CONSTRAINT pihole_single_row CHECK (config_id = 1)
-);
-----
 CREATE TABLE IF NOT EXISTS frontdesk.transmission (
     config_id int4 NOT NULL DEFAULT 1,
     url varchar(255) NOT NULL,
@@ -212,3 +204,21 @@ CREATE TABLE IF NOT EXISTS frontdesk.activity_log (
 CREATE INDEX IF NOT EXISTS activity_log_time_idx ON frontdesk.activity_log (created_at);
 ----
 CREATE INDEX IF NOT EXISTS activity_log_user_idx ON frontdesk.activity_log (user_id, id DESC);
+----
+CREATE TABLE IF NOT EXISTS frontdesk.service_configs (
+    name varchar(50) NOT NULL,
+    url varchar(255) NOT NULL DEFAULT '',
+    username varchar(255) NOT NULL DEFAULT '',
+    secret text NOT NULL DEFAULT '',
+    extra varchar(255) NOT NULL DEFAULT '',
+    CONSTRAINT service_configs_pkey PRIMARY KEY (name)
+);
+----
+INSERT INTO frontdesk.integrations_available (name, enabled)
+VALUES ('jellyfin', false), ('seerr', false), ('sonarr', false), ('radarr', false), ('qbittorrent', false),
+       ('tdarr', false), ('tailscale', false), ('ollama', false)
+ON CONFLICT (name) DO NOTHING;
+----
+-- pihole moved to service_configs, the old config never logged in so it has to be set again
+UPDATE frontdesk.integrations_available SET enabled = false
+WHERE name = 'pihole' AND NOT EXISTS (SELECT 1 FROM frontdesk.service_configs WHERE name = 'pihole');
