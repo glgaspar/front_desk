@@ -87,6 +87,22 @@ func (a *App) ToggleOnOFF(id string, toggle string) error {
 
 }
 
+// just the end of the log, not following. for when something needs to read it, not a person
+func (a *App) TailLogs(lines int) (string, error) {
+	if !ValidID(a.Id) {
+		return "", fmt.Errorf("invalid id: %s", a.Id)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// combined because most containers log to stderr
+	output, err := exec.CommandContext(ctx, "docker", "logs", "--tail", fmt.Sprint(lines), a.Id).CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("could not read the logs: %s", strings.TrimSpace(string(output)))
+	}
+	return string(output), nil
+}
+
 func SendBuildLog(appName string, message string) error {
 	return sendBuild(appName, message, false)
 }

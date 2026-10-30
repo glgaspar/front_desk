@@ -209,6 +209,7 @@ func main() {
 	e.GET("/qbittorrent/torrents", controller.GetQbitTorrents)
 	e.POST("/qbittorrent/toggle/:hash/:action", controller.QbitToggleTorrent, controller.AdminOnly)
 
+	e.POST("/apps/explain/:id", controller.ExplainApp)
 
 
 	e.POST("/transmission/config", controller.SetTransmission, controller.AdminOnly)

@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 
+	"github.com/glgaspar/front_desk/features/apps"
 	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/glgaspar/front_desk/features/integrations/services"
 	"github.com/labstack/echo/v4"
@@ -154,4 +156,36 @@ func QbitToggleTorrent(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
+}
+
+func ExplainApp(c echo.Context) error {
+	id := c.Param("id")
+	if !apps.ValidID(id) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid id"})
+	}
+
+	app, err := (&apps.Container{ID: id}).GetApp()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	logs, err := app.TailLogs(200)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+	if strings.TrimSpace(logs) == "" {
+		logs = "(no output)"
+	}
+
+	state := fmt.Sprintf("status %s, exit code %d", app.State.Status, app.State.ExitCode)
+	if app.State.Error != "" {
+		state += ", docker error: " + app.State.Error
+	}
+
+	answer, err := services.Explain(app.Name, app.ImageRef, state, logs)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: answer})
 }
