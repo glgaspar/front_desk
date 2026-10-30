@@ -28,7 +28,7 @@ func qbitPost(c *Config, path string, form url.Values, sid string) (*http.Respon
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if sid != "" {
-		req.AddCookie(&http.Cookie{Name: "SID", Value: sid})
+		req.Header.Set("Cookie", sid)
 	}
 	return client.Do(req)
 }
@@ -41,18 +41,23 @@ func qbitLogin(c *Config) (string, time.Time, error) {
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 
+	// 5.x names the cookie QBT_SID_<port> and answers 204, older ones call it SID
 	for _, cookie := range res.Cookies() {
-		if cookie.Name == "SID" {
+		if cookie.Name == "SID" || strings.HasPrefix(cookie.Name, "QBT_SID") {
 			// the webui default session timeout is one hour
-			return cookie.Value, time.Now().Add(50 * time.Minute), nil
+			return cookie.Name + "=" + cookie.Value, time.Now().Add(50 * time.Minute), nil
 		}
+	}
+	// no cookie but no complaint either: the webui lets this ip in without logging in
+	if res.StatusCode >= 200 && res.StatusCode < 300 && strings.TrimSpace(string(body)) != "Fails." {
+		return "", time.Time{}, nil
 	}
 	return "", time.Time{}, fmt.Errorf("qbittorrent login failed: %d %s", res.StatusCode, strings.TrimSpace(string(body)))
 }
 
+// logging in is not enough, it has to answer something that needs the session
 func checkQbittorrent(c Config) error {
-	_, _, err := qbitLogin(&c)
-	return err
+	return qbitDo(&c, "GET", "/api/v2/app/version", nil, nil)
 }
 
 // does the call and logs in again once if the session died on the other side
@@ -64,7 +69,7 @@ func qbitDo(c *Config, method string, path string, form url.Values, out any) err
 		}
 
 		if method == "GET" {
-			err = call(client, "GET", c.Url+path, map[string]string{"Cookie": "SID=" + sid}, nil, out)
+			err = call(client, "GET", c.Url+path, map[string]string{"Cookie": sid}, nil, out)
 		} else {
 			var res *http.Response
 			res, err = qbitPost(c, path, form, sid)

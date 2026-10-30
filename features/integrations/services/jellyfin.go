@@ -26,8 +26,9 @@ type jellyfinItem struct {
 	DateCreated       time.Time `json:"DateCreated"`
 }
 
+// 10.11 turned off the old X-Emby-Token header by default
 func jellyfin(c *Config, path string, out any) error {
-	return call(client, "GET", c.Url+path, map[string]string{"X-Emby-Token": c.Secret}, nil, out)
+	return call(client, "GET", c.Url+path, map[string]string{"Authorization": `MediaBrowser Token="` + c.Secret + `"`}, nil, out)
 }
 
 func checkJellyfin(c Config) error {
