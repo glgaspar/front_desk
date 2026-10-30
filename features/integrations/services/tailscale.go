@@ -14,6 +14,8 @@ type Device struct {
 	Online          bool      `json:"online"`
 	LastSeen        time.Time `json:"lastSeen"`
 	UpdateAvailable bool      `json:"updateAvailable"`
+	// zero when the key never expires
+	Expires time.Time `json:"expires"`
 }
 
 func tailscaleDevices(c *Config) ([]Device, error) {
@@ -26,6 +28,8 @@ func tailscaleDevices(c *Config) ([]Device, error) {
 			ConnectedToControl bool      `json:"connectedToControl"`
 			LastSeen           time.Time `json:"lastSeen"`
 			UpdateAvailable    bool      `json:"updateAvailable"`
+			Expires            time.Time `json:"expires"`
+			KeyExpiryDisabled  bool      `json:"keyExpiryDisabled"`
 		} `json:"devices"`
 	}
 	// connectedToControl only comes with fields=all. "-" is the tailnet of the key
@@ -42,6 +46,9 @@ func tailscaleDevices(c *Config) ([]Device, error) {
 			name = d.Hostname
 		}
 		device := Device{Name: name, Os: d.Os, Online: d.ConnectedToControl, LastSeen: d.LastSeen, UpdateAvailable: d.UpdateAvailable}
+		if !d.KeyExpiryDisabled {
+			device.Expires = d.Expires
+		}
 		if len(d.Addresses) > 0 {
 			device.Address = d.Addresses[0]
 		}
