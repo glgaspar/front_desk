@@ -177,6 +177,9 @@ func main() {
 	e.POST("/widgets", controller.CreateWidget)
 	e.GET("/widgets", controller.GetWidgets)
 	e.PUT("/widgets/toggle/:id/:toggle", controller.ToggleWidget, controller.AdminOnly)
+	e.GET("/widgets/:name/config", controller.GetWidgetConfig)
+	e.POST("/widgets/:name/config", controller.SetWidgetConfig, controller.AdminOnly)
+	e.POST("/widgets/:name/call", controller.CallWidget)
 
 	e.POST("/cloudflare/config", controller.SetCloudflare, controller.AdminOnly)
 	e.GET("/cloudflare/config", controller.GetCloudflare)

@@ -42,6 +42,8 @@ var actionLabels = map[string]string{
 	"POST /qbittorrent/toggle/:hash/:action": "changed torrent",
 	"POST /apps/explain/:id":                 "asked ollama about app",
 	"POST /seerr/requests/:id/:action":       "answered seerr request",
+	"POST /widgets/:name/config":             "changed widget config",
+	"POST /widgets/:name/call":               "widget action",
 	"POST /transmission/config":              "changed transmission config",
 	"POST /transmission/toggle/:id/:action":  "changed torrent",
 	"POST /notifications":                    "added notification channel",
@@ -108,6 +110,11 @@ func ActivityLogger(next echo.HandlerFunc) echo.HandlerFunc {
 
 		entry := newEntry(c, actionLabel(method, path), pathTarget(c))
 		err := next(c)
+
+		// widgets polling through the api would bury everything else
+		if skip, _ := c.Get("skipActivity").(bool); skip {
+			return err
+		}
 
 		status := c.Response().Status
 		if he, ok := err.(*echo.HTTPError); ok {

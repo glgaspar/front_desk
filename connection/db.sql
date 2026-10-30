@@ -222,3 +222,13 @@ ON CONFLICT (name) DO NOTHING;
 -- pihole moved to service_configs, the old config never logged in so it has to be set again
 UPDATE frontdesk.integrations_available SET enabled = false
 WHERE name = 'pihole' AND NOT EXISTS (SELECT 1 FROM frontdesk.service_configs WHERE name = 'pihole');
+----
+-- widgets that bring their own config. the manifest is text so it comes back exactly as the
+-- front sent it, thats how the front knows the widget file changed since an admin saved it
+CREATE TABLE IF NOT EXISTS frontdesk.widget_configs (
+    name varchar(50) NOT NULL,
+    manifest text NOT NULL,
+    "values" jsonb NOT NULL DEFAULT '{}'::jsonb,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT widget_configs_pkey PRIMARY KEY (name)
+);

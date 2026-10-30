@@ -155,3 +155,5 @@ labels:
 *   `GET /widgets` - Retrieve dashboard widgets.
 *   `POST /widgets` - Create a new dashboard widget.
 *   `PUT /widgets/toggle/:id/:toggle` - Enable or disable a specific widget.
+*   `GET /widgets/:name/config`, `POST /widgets/:name/config` - Config of a widget that brings its own (url, keys...). Saved together with the widget manifest, admin only. Secrets never come back, only if they are set.
+*   `POST /widgets/:name/call` - `{method, path, body}`. The api makes the call to the url saved for that widget, with the auth its manifest describes, and only to the paths its manifest allows. How to write one of these widgets is in the front end repo, `WIDGETS.md`.

@@ -1294,3 +1294,94 @@ func TestNotification(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Sent, go check it"})
 }
+
+func GetWidgetConfig(c echo.Context) error {
+	name := c.Param("name")
+	if !widgets.ValidName(name) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid widget name"})
+	}
+
+	config, err := widgets.PublicConfig(name)
+	if err != nil {
+		return c.JSON(http.StatusOK, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: config})
+}
+
+func SetWidgetConfig(c echo.Context) error {
+	name := c.Param("name")
+	if !widgets.ValidName(name) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid widget name"})
+	}
+
+	var data struct {
+		Manifest string            `json:"manifest"`
+		Values   map[string]string `json:"values"`
+	}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = widgets.SaveConfig(name, data.Manifest, data.Values)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Widget configured"})
+}
+
+// the widget asks, the api makes the call with what an admin saved for it
+func CallWidget(c echo.Context) error {
+	name := c.Param("name")
+	if !widgets.ValidName(name) {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Invalid widget name"})
+	}
+
+	var data struct {
+		Method string          `json:"method"`
+		Path   string          `json:"path"`
+		Body   json.RawMessage `json:"body"`
+	}
+	body, err := io.ReadAll(io.LimitReader(c.Request().Body, 1<<20))
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	if data.Method == "" {
+		data.Method = http.MethodGet
+	}
+
+	user := CurrentUser(c)
+	result, err := widgets.Call(c.Request().Context(), name, data.Method, data.Path, data.Body, user != nil && user.IsAdmin)
+	if err != nil {
+		c.Set("skipActivity", true)
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+	c.Set("skipActivity", !result.Logged)
+
+	if result.Status < 200 || result.Status > 299 {
+		text := string(result.Body)
+		if len(text) > 300 {
+			text = text[:300]
+		}
+		return c.JSON(http.StatusBadGateway, Response{Status: false, Message: fmt.Sprintf("%s answered %d: %s", name, result.Status, text)})
+	}
+
+	// json goes back as json, anything else as text
+	var answer interface{} = string(result.Body)
+	if json.Valid(result.Body) {
+		answer = json.RawMessage(result.Body)
+	}
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: answer})
+}
