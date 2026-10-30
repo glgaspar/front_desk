@@ -32,11 +32,12 @@ type service struct {
 }
 
 var known = map[string]service{
-	"jellyfin": {needsUrl: true, needsSecret: true, check: checkJellyfin},
-	"seerr":    {needsUrl: true, needsSecret: true, check: checkSeerr},
-	"sonarr":   {needsUrl: true, needsSecret: true, check: checkArr},
-	"radarr":   {needsUrl: true, needsSecret: true, check: checkArr},
-	"pihole":   {needsUrl: true, needsSecret: true, check: checkPihole},
+	"jellyfin":    {needsUrl: true, needsSecret: true, check: checkJellyfin},
+	"seerr":       {needsUrl: true, needsSecret: true, check: checkSeerr},
+	"sonarr":      {needsUrl: true, needsSecret: true, check: checkArr},
+	"radarr":      {needsUrl: true, needsSecret: true, check: checkArr},
+	"qbittorrent": {needsUrl: true, needsSecret: true, check: checkQbittorrent},
+	"pihole":      {needsUrl: true, needsSecret: true, check: checkPihole},
 }
 
 func Known(name string) bool {
@@ -233,6 +234,8 @@ func (s *session) get(login func() (string, time.Time, error)) (string, error) {
 // drops the session when the config changes
 func forgetSessions(name string) {
 	switch name {
+	case "qbittorrent":
+		qbit.forget()
 	case "pihole":
 		piholeSession.forget()
 	}

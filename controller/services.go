@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 
 	"github.com/glgaspar/front_desk/features/integrations"
 	"github.com/glgaspar/front_desk/features/integrations/services"
@@ -118,4 +119,30 @@ func GetJellyfinStreams(c echo.Context) error {
 
 func GetMediaPipeline(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: services.GetPipeline()})
+}
+
+func GetQbitTorrents(c echo.Context) error {
+	torrents, err := services.QbitTorrents()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: torrents})
+}
+
+var torrentHash = regexp.MustCompile(`^[a-fA-F0-9]{40,64}$`)
+
+func QbitToggleTorrent(c echo.Context) error {
+	hash := c.Param("hash")
+	action := c.Param("action")
+	if !torrentHash.MatchString(hash) || (action != "start" && action != "stop" && action != "remove") {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: "Both hash and action (\"start\", \"stop\", \"remove\") must be sent"})
+	}
+
+	err := services.QbitAction(hash, action)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful"})
 }

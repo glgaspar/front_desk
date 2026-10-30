@@ -68,6 +68,57 @@ func TestPiholeSessionAndDns(t *testing.T) {
 	}
 }
 
+func TestQbitRelogin(t *testing.T) {
+	qbit.forget()
+	logins := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v2/auth/login" {
+			logins++
+			r.ParseForm()
+			if r.Form.Get("password") != "pw" {
+				w.Write([]byte("Fails."))
+				return
+			}
+			http.SetCookie(w, &http.Cookie{Name: "SID", Value: "good"})
+			w.Write([]byte("Ok."))
+			return
+		}
+		if cookie, err := r.Cookie("SID"); err != nil || cookie.Value != "good" {
+			w.WriteHeader(403)
+			return
+		}
+		switch r.URL.Path {
+		case "/api/v2/torrents/info":
+			w.Write([]byte(`[{"hash":"abc","name":"debian.iso","progress":0.5,"dlspeed":100,"upspeed":5,"state":"downloading"}]`))
+		case "/api/v2/torrents/stop":
+			// older than 5.0
+			w.WriteHeader(404)
+		case "/api/v2/torrents/pause":
+			w.Write([]byte(""))
+		}
+	}))
+	defer server.Close()
+
+	c := &Config{Url: server.URL, Username: "admin", Secret: "pw"}
+	qbit.value = "expired"
+	qbit.expires = qbit.expires.AddDate(1000, 0, 0)
+
+	var torrents []Torrent
+	err := qbitDo(c, "GET", "/api/v2/torrents/info", nil, &torrents)
+	if err != nil || len(torrents) != 1 || torrents[0].Name != "debian.iso" || logins != 1 {
+		t.Fatalf("got %v %+v after %d logins", err, torrents, logins)
+	}
+
+	err = qbitDo(c, "POST", "/api/v2/torrents/stop", url.Values{"hashes": {"abc"}}, nil)
+	if !hasStatus(err, 404) {
+		t.Errorf("stop should 404 on old versions, got %v", err)
+	}
+
+	if err := checkQbittorrent(Config{Url: server.URL, Secret: "wrong"}); err == nil {
+		t.Error("wrong password should fail")
+	}
+}
+
 func TestArrQueue(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Api-Key") != "key" {
