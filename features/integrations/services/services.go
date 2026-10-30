@@ -37,6 +37,7 @@ var known = map[string]service{
 	"sonarr":      {needsUrl: true, needsSecret: true, check: checkArr},
 	"radarr":      {needsUrl: true, needsSecret: true, check: checkArr},
 	"qbittorrent": {needsUrl: true, needsSecret: true, check: checkQbittorrent},
+	"tdarr":       {needsUrl: true, check: checkTdarr},
 	"pihole":      {needsUrl: true, needsSecret: true, check: checkPihole},
 }
 

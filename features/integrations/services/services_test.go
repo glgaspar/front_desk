@@ -148,3 +148,26 @@ func TestArrQueue(t *testing.T) {
 		t.Errorf("got %v", err)
 	}
 }
+
+func TestTdarrStats(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Data map[string]string `json:"data"`
+		}
+		json.NewDecoder(r.Body).Decode(&body)
+		if r.URL.Path != "/api/v2/cruddb" || body.Data["docID"] != "statistics" || r.Header.Get("x-api-key") != "k" {
+			w.WriteHeader(400)
+			return
+		}
+		w.Write([]byte(`{"totalFileCount":100,"sizeDiff":12.5,"table1Count":3,"table2Count":40,"table3Count":1,"table4Count":2,"table5Count":50,"table6Count":0}`))
+	}))
+	defer server.Close()
+
+	stats, err := tdarrStats(&Config{Url: server.URL, Secret: "k"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Queue != 5 || stats.Processed != 90 || stats.Errored != 1 || stats.SavedGB != 12.5 || stats.Files != 100 {
+		t.Errorf("got %+v", stats)
+	}
+}

@@ -121,6 +121,15 @@ func GetMediaPipeline(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: services.GetPipeline()})
 }
 
+func GetTdarrStats(c echo.Context) error {
+	stats, err := services.GetTdarrStats()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: stats})
+}
+
 func GetQbitTorrents(c echo.Context) error {
 	torrents, err := services.QbitTorrents()
 	if err != nil {

@@ -204,6 +204,7 @@ func main() {
 
 	e.GET("/jellyfin/streams", controller.GetJellyfinStreams)
 	e.GET("/media/pipeline", controller.GetMediaPipeline)
+	e.GET("/tdarr/stats", controller.GetTdarrStats)
 
 	e.GET("/qbittorrent/torrents", controller.GetQbitTorrents)
 	e.POST("/qbittorrent/toggle/:hash/:action", controller.QbitToggleTorrent, controller.AdminOnly)
