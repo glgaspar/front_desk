@@ -132,6 +132,15 @@ func GetTdarrStats(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: stats})
 }
 
+func GetTailscaleDevices(c echo.Context) error {
+	devices, err := services.TailscaleDevices()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d devices found", len(devices)), Data: devices})
+}
+
 func GetQbitTorrents(c echo.Context) error {
 	torrents, err := services.QbitTorrents()
 	if err != nil {
