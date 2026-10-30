@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/glgaspar/front_desk/connection"
+	"github.com/glgaspar/front_desk/features/integrations/services"
 )
 
 type Config struct {
@@ -377,6 +379,14 @@ func AddProxyHost(hostname string, localPort string, appDir string, certId int) 
 		return nil, err
 	}
 
+	// so the lan goes straight to npm instead of out through cloudflare. the host is
+	// already made, a pihole problem shouldnt fail the whole thing
+	if services.PiholeEnabled() {
+		if err := services.AddDns(hostname); err != nil {
+			log.Printf("could not add %s to pihole: %v", hostname, err)
+		}
+	}
+
 	return &host, nil
 }
 
@@ -398,6 +408,10 @@ func RemoveProxyHost(hostId int) error {
 		return err
 	}
 
+	// need the domains before its gone to clean them from pihole too
+	var host ProxyHost
+	c.call("GET", fmt.Sprintf("/api/nginx/proxy-hosts/%d", hostId), nil, &host)
+
 	err = c.call("DELETE", fmt.Sprintf("/api/nginx/proxy-hosts/%d", hostId), nil, nil)
 	// someone already deleted it on npm, just forget about it here too
 	if err != nil && !strings.Contains(err.Error(), "status: 404") {
@@ -409,7 +423,18 @@ func RemoveProxyHost(hostId int) error {
 		return err
 	}
 	_, err = conn.Exec(`delete from frontdesk.npm_routes where proxy_host_id = $1`, hostId)
-	return err
+	if err != nil {
+		return err
+	}
+
+	if services.PiholeEnabled() {
+		for _, domain := range host.DomainNames {
+			if err := services.RemoveDns(domain, true); err != nil {
+				log.Printf("could not remove %s from pihole: %v", domain, err)
+			}
+		}
+	}
+	return nil
 }
 
 // same as cloudflare, removes what we created for that app. for older apps it only

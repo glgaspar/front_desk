@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -61,4 +62,47 @@ func PiholeHistory(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: history})
+}
+
+func GetPiholeDns(c echo.Context) error {
+	records, err := services.ListDns()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d records found", len(records)), Data: map[string]interface{}{
+		"lanIp":   services.PiholeLanIp(),
+		"records": records,
+	}})
+}
+
+func AddPiholeDns(c echo.Context) error {
+	var data struct {
+		Hostname string `json:"hostname"`
+	}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+	defer c.Request().Body.Close()
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err = services.AddDns(data.Hostname)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Record created"})
+}
+
+func RemovePiholeDns(c echo.Context) error {
+	err := services.RemoveDns(c.Param("hostname"), false)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Record removed"})
 }

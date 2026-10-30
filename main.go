@@ -198,6 +198,9 @@ func main() {
 	e.GET("/services/:name/config", controller.GetService)
 
 	e.GET("/pihole/history", controller.PiholeHistory)
+	e.GET("/pihole/dns", controller.GetPiholeDns)
+	e.POST("/pihole/dns", controller.AddPiholeDns, controller.AdminOnly)
+	e.DELETE("/pihole/dns/:hostname", controller.RemovePiholeDns, controller.AdminOnly)
 
 
 
