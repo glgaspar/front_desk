@@ -115,3 +115,7 @@ func GetJellyfinStreams(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{Status: true, Message: fmt.Sprintf("%d streams", len(streams)), Data: streams})
 }
+
+func GetMediaPipeline(c echo.Context) error {
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: services.GetPipeline()})
+}

@@ -84,3 +84,23 @@ func episodeTitle(item jellyfinItem) string {
 	}
 	return item.Name
 }
+
+func jellyfinRecent(c *Config) ([]PipelineItem, error) {
+	var res struct {
+		Items []jellyfinItem `json:"Items"`
+	}
+	err := jellyfin(c, "/Items?SortBy=DateCreated&SortOrder=Descending&Recursive=true&IncludeItemTypes=Movie,Episode&Limit=8&Fields=DateCreated", &res)
+	if err != nil {
+		return nil, fmt.Errorf("jellyfin: %w", err)
+	}
+
+	items := []PipelineItem{}
+	for _, item := range res.Items {
+		title := item.Name
+		if item.Type == "Episode" {
+			title = item.SeriesName + " " + episodeTitle(item)
+		}
+		items = append(items, PipelineItem{Title: title, Source: "jellyfin", Date: item.DateCreated.Format(time.RFC3339)})
+	}
+	return items, nil
+}

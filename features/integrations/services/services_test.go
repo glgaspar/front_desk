@@ -67,3 +67,33 @@ func TestPiholeSessionAndDns(t *testing.T) {
 		t.Errorf("got %v after %d logins", err, logins)
 	}
 }
+
+func TestArrQueue(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Api-Key") != "key" {
+			w.WriteHeader(401)
+			return
+		}
+		w.Write([]byte(`{"records":[
+			{"title":"Show.S01E02.1080p","size":1000,"sizeleft":250,"timeleft":"00:10:00","status":"downloading","series":{"title":"Show"},"episode":{"seasonNumber":1,"episodeNumber":2}},
+			{"title":"Movie.2024","size":0,"sizeleft":0,"status":"queued","movie":{"title":"Movie","year":2024}}
+		]}`))
+	}))
+	defer server.Close()
+
+	items, err := queue(&Config{Url: server.URL, Secret: "key"}, "sonarr", "/api/v3/queue")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if items[0].Title != "Show S01E02" || items[0].Progress != 0.75 || items[0].TimeLeft != "00:10:00" {
+		t.Errorf("got %+v", items[0])
+	}
+	if items[1].Title != "Movie (2024)" || items[1].Progress != 0 {
+		t.Errorf("got %+v", items[1])
+	}
+
+	_, err = queue(&Config{Url: server.URL, Secret: "nope"}, "radarr", "/api/v3/queue")
+	if err == nil || !hasStatus(err, 401) {
+		t.Errorf("got %v", err)
+	}
+}

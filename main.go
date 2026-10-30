@@ -203,6 +203,7 @@ func main() {
 	e.DELETE("/pihole/dns/:hostname", controller.RemovePiholeDns, controller.AdminOnly)
 
 	e.GET("/jellyfin/streams", controller.GetJellyfinStreams)
+	e.GET("/media/pipeline", controller.GetMediaPipeline)
 
 
 

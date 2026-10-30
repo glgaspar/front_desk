@@ -33,6 +33,9 @@ type service struct {
 
 var known = map[string]service{
 	"jellyfin": {needsUrl: true, needsSecret: true, check: checkJellyfin},
+	"seerr":    {needsUrl: true, needsSecret: true, check: checkSeerr},
+	"sonarr":   {needsUrl: true, needsSecret: true, check: checkArr},
+	"radarr":   {needsUrl: true, needsSecret: true, check: checkArr},
 	"pihole":   {needsUrl: true, needsSecret: true, check: checkPihole},
 }
 
