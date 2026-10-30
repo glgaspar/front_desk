@@ -212,6 +212,7 @@ func main() {
 
 	e.POST("/apps/explain/:id", controller.ExplainApp)
 
+	e.GET("/monitoring/disks/forecast", controller.GetDiskForecast)
 
 	e.POST("/transmission/config", controller.SetTransmission, controller.AdminOnly)
 	e.GET("/transmission/config", controller.GetTransmission)
