@@ -197,3 +197,42 @@ func seerrRequests(c *Config) ([]PipelineItem, error) {
 	}
 	return items, nil
 }
+
+type SeerrPending struct {
+	Id          int    `json:"id"`
+	Title       string `json:"title"`
+	Type        string `json:"type"`
+	RequestedBy string `json:"requestedBy"`
+	CreatedAt   string `json:"createdAt"`
+}
+
+func SeerrPendingRequests() ([]SeerrPending, error) {
+	c, err := loadEnabled("seerr")
+	if err != nil {
+		return nil, err
+	}
+	requests, err := seerrList(c, "pending")
+	if err != nil {
+		return nil, err
+	}
+
+	titles := seerrTitles(c, requests)
+	pending := []SeerrPending{}
+	for i, r := range requests {
+		pending = append(pending, SeerrPending{Id: r.Id, Title: titles[i], Type: r.Type, RequestedBy: r.RequestedBy.DisplayName, CreatedAt: r.CreatedAt})
+	}
+	return pending, nil
+}
+
+// action is approve or decline, same words seerr uses on the url
+func SeerrAnswer(id int, action string) error {
+	c, err := loadEnabled("seerr")
+	if err != nil {
+		return err
+	}
+	err = call(client, "POST", fmt.Sprintf("%s/api/v1/request/%d/%s", c.Url, id, action), map[string]string{"X-Api-Key": c.Secret}, nil, nil)
+	if err != nil {
+		return fmt.Errorf("seerr: %w", err)
+	}
+	return nil
+}

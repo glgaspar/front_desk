@@ -213,6 +213,8 @@ func main() {
 	e.POST("/apps/explain/:id", controller.ExplainApp)
 
 	e.GET("/monitoring/disks/forecast", controller.GetDiskForecast)
+	e.GET("/seerr/pending", controller.GetSeerrPending)
+	e.POST("/seerr/requests/:id/:action", controller.AnswerSeerrRequest, controller.AdminOnly)
 
 	e.POST("/transmission/config", controller.SetTransmission, controller.AdminOnly)
 	e.GET("/transmission/config", controller.GetTransmission)
