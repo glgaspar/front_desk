@@ -1172,6 +1172,22 @@ func ToggleWidget(c echo.Context) error {
 	return c.JSON(http.StatusOK, Response{Status: true, Message: "Operation successful", Data: widget})
 }
 
+func ReorderWidgets(c echo.Context) error {
+	var data struct {
+		Ids []int `json:"ids"`
+	}
+	if err := c.Bind(&data); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, Response{Status: false, Message: err.Error()})
+	}
+
+	err := widgets.Reorder(data.Ids)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Response{Status: false, Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, Response{Status: true, Message: "Widgets reordered"})
+}
+
 func GetUptime(c echo.Context) error {
 	uptime, err := monitoring.GetUptime(c.QueryParam("range"))
 	if err != nil {

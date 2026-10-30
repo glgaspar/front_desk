@@ -55,7 +55,7 @@ func (w *Widget) GetList(homeOnly bool) ([]Widget, error) {
 		`
 	}
 
-	query += `ORDER BY w.position ASC`
+	query += `ORDER BY w.position ASC, w.id ASC`
 
 	rows, err := conn.Query(query)
 	if err != nil {
@@ -108,4 +108,26 @@ func (w *Widget) Toggle(toggle string) error {
 		&w.Selected)
 
 	return err
+}
+
+// the ids come in the order they should show up, the index becomes the position
+func Reorder(ids []int) error {
+	conn, err := connection.Db()
+	if err != nil {
+		return err
+	}
+
+	tx, err := conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for position, id := range ids {
+		_, err = tx.Exec(`UPDATE frontdesk.widgets SET position = $1 WHERE id = $2`, position, id)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }

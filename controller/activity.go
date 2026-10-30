@@ -29,6 +29,7 @@ var actionLabels = map[string]string{
 	"GET /apps/updates":                      "checked for updates",
 	"POST /widgets":                          "registered widget",
 	"PUT /widgets/toggle/:id/:toggle":        "changed widget",
+	"PUT /widgets/order":                     "reordered widgets",
 	"POST /cloudflare/config":                "changed cloudflare config",
 	"POST /cloudflare/hostname":              "added cloudflare hostname",
 	"DELETE /cloudflare/hostname/:hostname":  "removed cloudflare hostname",
